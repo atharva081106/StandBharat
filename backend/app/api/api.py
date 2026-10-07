@@ -1,0 +1,19 @@
+from fastapi import APIRouter
+from app.api.endpoints import auth, workspaces, brands, agents, integrations, opportunities, dashboard, ai, brand_brain, agent_runs, orchestrator, content, approvals, publishing, performance
+
+api_router = APIRouter()
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(workspaces.router, prefix="/workspaces", tags=["workspaces"])
+api_router.include_router(brands.router, prefix="/brands", tags=["brands"])
+api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
+api_router.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
+api_router.include_router(opportunities.router, prefix="/opportunities", tags=["opportunities"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
+api_router.include_router(brand_brain.router, prefix="/brand-brain", tags=["brand-brain"])
+api_router.include_router(agent_runs.router, prefix="/agent-runs", tags=["agent-runs"])
+api_router.include_router(orchestrator.router, prefix="/orchestrator", tags=["orchestrator"])
+api_router.include_router(content.router, prefix="/content", tags=["content"])
+api_router.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
+api_router.include_router(publishing.router, tags=["publishing"])
+api_router.include_router(performance.router, prefix="/performance", tags=["performance"])

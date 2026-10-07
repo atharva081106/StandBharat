@@ -1,0 +1,38 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-accent: #F97316;
+  --color-brand-accent-hover: #EA580C;
+  --color-brand-accent-light: #FFEDD5;
+  --color-brand-accent-subtle: #FFF7ED;
+
+  --color-bg-primary: #FAFAF8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-subtle: #F5F5F3;
+
+  --color-text-primary: #111111;
+  --color-text-secondary: #1F1F1F;
+  --color-text-tertiary: #525252;
+  --color-text-muted: #737373;
+  
+  --color-border-primary: #E5E5E5;
+  --color-border-hover: #D4D4D4;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
