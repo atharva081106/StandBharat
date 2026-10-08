@@ -58,7 +58,7 @@ def get_content_projects(
     ).order_by(ContentProject.created_at.desc()).all()
 
 @router.get("/projects/{id}", response_model=ContentProjectResponse)
-def get_content_project(
+def get_xxx_content_project(
     id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -137,7 +137,7 @@ def create_content_brief(
     return brief
 
 @router.get("/projects/{id}/brief", response_model=ContentBriefResponse)
-def get_content_brief(
+def get_xxx_content_brief(
     id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -220,7 +220,7 @@ def generate_content_draft(
     return {"message": "Draft generation started", "task_id": str(task.id)}
 
 @router.get("/projects/{id}/drafts", response_model=List[ContentDraftResponse])
-def get_project_drafts(
+def get_xxx_project_drafts(
     id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -237,7 +237,7 @@ def get_project_drafts(
     ).order_by(ContentDraft.created_at.desc()).all()
 
 @router.get("/drafts/{id}", response_model=ContentDraftResponse)
-def get_content_draft(
+def get_xxx_content_draft(
     id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -257,7 +257,7 @@ def get_content_draft(
     return draft
 
 @router.get("/drafts/{id}/versions", response_model=List[ContentVersionResponse])
-def get_draft_versions(
+def get_xxx_draft_versions(
     id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

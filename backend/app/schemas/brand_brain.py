@@ -182,6 +182,13 @@ class BrandDocumentBase(BaseModel):
     source: Optional[str] = None
     status: Optional[str] = "active"
     metadata_json: Optional[Dict[str, Any]] = {}
+    file_path: Optional[str] = None
+    file_size: Optional[int] = 0
+    category: Optional[str] = "Uncategorized"
+    processing_status: Optional[str] = "UPLOADED"
+    retrieval_status: Optional[str] = "NOT_CONFIGURED"
+    uploaded_by: Optional[UUID] = None
+    extracted_text: Optional[str] = None
 
 class BrandDocumentResponse(BrandDocumentBase):
     id: UUID
@@ -190,8 +197,19 @@ class BrandDocumentResponse(BrandDocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class WebsiteAnalysisResponse(BaseModel):
+    id: UUID
+    brand_id: UUID
+    workspace_id: UUID
+    status: str
+    url: Optional[str] = None
+    result_metadata: Optional[Dict[str, Any]] = None
+    analysis_results: Optional[Dict[str, Any]] = None
+    model_config = ConfigDict(from_attributes=True)
+
 class BrandContextResponse(BaseModel):
     brand: BrandResponse
+    website_analysis: Optional[WebsiteAnalysisResponse] = None
     voice: Optional[BrandVoiceResponse] = None
     audiences: List[AudienceResponse] = []
     products: List[ProductResponse] = []

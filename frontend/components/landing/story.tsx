@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
-import { ScrollReveal } from '@/components/ui/scroll-reveal'
+
 
 const CHAOS_TOOLS = [
   { label: 'Analytics', angle: 90 },
@@ -66,24 +67,24 @@ export function ProblemSection() {
   return (
     <section className="py-28 px-6 lg:px-8 bg-transparent border-t border-[#E8E4DC]" id="problem">
       <div className="max-w-[1400px] mx-auto">
-        <ScrollReveal>
+        <div>
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#858585] mb-8">
             THE PROBLEM
           </div>
-        </ScrollReveal>
+        </div>
         <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
           <div className="w-full lg:w-[42%] space-y-10">
-            <ScrollReveal delay={0.1}>
+            <div>
               <h2 className="text-[44px] md:text-[58px] font-extrabold tracking-tight text-[#111111] leading-[1.05]">
                 Marketing wasn&apos;t built<br/>to work this way.
               </h2>
-            </ScrollReveal>
-            <ScrollReveal delay={0.2}>
+            </div>
+            <div>
               <p className="text-lg text-[#5A5A5A] leading-relaxed max-w-md font-medium">
                 Businesses rely on multiple disconnected tools, manual processes and scattered data. Teams spend more time coordinating marketing than driving growth.
               </p>
-            </ScrollReveal>
-            <ScrollReveal delay={0.3}>
+            </div>
+            <div>
               <div className="grid grid-cols-3 gap-6 pt-8 border-t border-[#E8E4DC]">
                 <div>
                   <div className="text-[36px] font-extrabold text-[#111111] leading-none mb-2">10+</div>
@@ -101,14 +102,14 @@ export function ProblemSection() {
               <p className="text-[10px] text-[#B0AB9E] uppercase tracking-widest font-bold mt-10">
                 * Typical marketing workflow
               </p>
-            </ScrollReveal>
+            </div>
           </div>
           <div className="w-full lg:w-[58%] flex justify-center">
-            <ScrollReveal delay={0.4} className="w-full max-w-[560px]">
+            <div>
               <div className="bg-white border border-[#E8E4DC] rounded-[28px] p-10 shadow-xl shadow-black/5 w-full flex items-center justify-center min-h-[460px]">
                 <ChaosOrb />
               </div>
-            </ScrollReveal>
+            </div>
           </div>
         </div>
       </div>
@@ -136,22 +137,22 @@ export function MarketingLoop() {
     <section className="py-28 px-6 lg:px-8 bg-white/60 backdrop-blur-sm border-y border-[#E8E4DC]" id="how-it-works">
       <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
         <div className="w-full lg:w-[40%] space-y-8">
-          <ScrollReveal delay={0}>
+          <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#858585]">
               THE SOLUTION
             </div>
-          </ScrollReveal>
-          <ScrollReveal delay={0.1}>
+          </div>
+          <div>
             <h2 className="text-[44px] md:text-[58px] font-extrabold tracking-tight text-[#111111] leading-[1.05]">
               One continuous<br/>marketing loop.
             </h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.2}>
+          </div>
+          <div>
             <p className="text-lg text-[#5A5A5A] leading-relaxed font-medium">
               StandBharat connects the entire marketing lifecycle from insight to execution, with an AI CMO orchestrating specialized agents, strategy and decisions.
             </p>
-          </ScrollReveal>
-          <ScrollReveal delay={0.3}>
+          </div>
+          <div>
             <div className="space-y-1 pt-2">
               {LOOP_STEPS.map((step, i) => (
                 <div
@@ -172,11 +173,11 @@ export function MarketingLoop() {
                 See How It Works →
               </Button>
             </Link>
-          </ScrollReveal>
+          </div>
         </div>
 
         <div className="w-full lg:w-[60%] flex justify-center">
-          <ScrollReveal delay={0.4}>
+          <div>
             <div className="relative w-[480px] h-[480px] flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 480 480">
                 <circle cx="240" cy="240" r={r} fill="none" stroke="#E8E4DC" strokeWidth="1.5" strokeDasharray="8 6" />
@@ -202,12 +203,12 @@ export function MarketingLoop() {
                 )
               })}
               <div className="relative z-20 w-32 h-32 rounded-full bg-white border-2 border-[#800020] shadow-xl shadow-[#800020]/10 flex flex-col items-center justify-center text-center gap-1 hover:scale-105 transition-transform duration-300 cursor-default">
-                <div className="w-4 h-4 rounded-full bg-[#800020]"></div>
+                <Image src="/logo.jpg" alt="StandBharat Logo" width={24} height={24} className="rounded object-contain border border-black/5" />
                 <span className="text-xs font-extrabold text-[#111111] tracking-tight leading-tight">StandBharat</span>
                 <span className="text-[9px] text-[#858585] font-semibold uppercase tracking-wider">AI CMO</span>
               </div>
             </div>
-          </ScrollReveal>
+          </div>
         </div>
       </div>
     </section>
@@ -261,26 +262,26 @@ export function DifferentiationSection() {
       <div className="max-w-[1400px] mx-auto space-y-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-4 max-w-xl">
-            <ScrollReveal delay={0}>
+            <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#858585]">
                 WHY STANDBHARAT
               </div>
-            </ScrollReveal>
-            <ScrollReveal delay={0.1}>
+            </div>
+            <div>
               <h2 className="text-[40px] md:text-[52px] font-extrabold tracking-tight leading-[1.05]">
                 More than tools.<br/>A smarter way to market.
               </h2>
-            </ScrollReveal>
+            </div>
           </div>
-          <ScrollReveal delay={0.2}>
+          <div>
             <p className="text-[#858585] text-lg font-medium max-w-sm leading-relaxed">
               An AI-native system that thinks, acts, and learns — so your team can focus on what matters.
             </p>
-          </ScrollReveal>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {DIFF_CARDS.map((card, i) => (
-            <ScrollReveal delay={0.1 * i} key={i}>
+            <div>
               <div className="group p-8 rounded-[20px] bg-[#181818] border border-white/[0.08] hover:border-[#800020]/60 hover:bg-[#1C1214] transition-all duration-300 cursor-default h-full">
                 <div className="w-11 h-11 rounded-xl bg-[#800020]/15 flex items-center justify-center text-[#F5E6E8] mb-7 group-hover:bg-[#800020]/25 transition-colors duration-300">
                   {card.icon}
@@ -288,7 +289,7 @@ export function DifferentiationSection() {
                 <h3 className="text-base font-bold mb-3 text-white">{card.title}</h3>
                 <p className="text-sm text-[#858585] leading-relaxed font-medium">{card.desc}</p>
               </div>
-            </ScrollReveal>
+            </div>
           ))}
         </div>
       </div>

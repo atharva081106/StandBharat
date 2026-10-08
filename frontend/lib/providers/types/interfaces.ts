@@ -84,3 +84,12 @@ export interface OrchestratorProvider {
   updateStatus: (mode: string) => Promise<any>;
   getRuns: () => Promise<any[]>;
 }
+
+
+export interface NotificationProvider {
+  notifications: any[];
+  unreadCount: number;
+  fetchNotifications: () => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+}

@@ -9,13 +9,15 @@ router = APIRouter()
 
 @router.get("/", response_model=list[OpportunityResponse])
 def get_opportunities(
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(deps.get_db),
     brand: Brand = Depends(deps.get_current_brand)
 ):
     opportunities = db.query(Opportunity).filter(
         Opportunity.workspace_id == brand.workspace_id,
         Opportunity.brand_id == brand.id
-    ).order_by(Opportunity.priority.desc(), Opportunity.created_at.desc()).all()
+    ).order_by(Opportunity.priority.desc(), Opportunity.created_at.desc()).offset(skip).limit(limit).all()
     return opportunities
 
 @router.get("/{id}", response_model=OpportunityResponse)

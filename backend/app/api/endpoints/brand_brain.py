@@ -318,6 +318,97 @@ def update_strategy(
     return strategy
 
 # ----------------- DOCUMENTS -----------------
+import os
+import shutil
+import uuid
+from fastapi import UploadFile, File, Form, BackgroundTasks, HTTPException
+from typing import Optional
+
+from app.api import deps
+from app.services.document_processor import process_document
+
+STORAGE_DIR = "storage/documents"
+
 @router.get("/documents", response_model=List[BrandDocumentResponse])
 def get_documents(db: Session = Depends(get_db), brand: Brand = Depends(get_current_brand)):
-    return db.query(BrandDocument).filter(BrandDocument.brand_id == brand.id).all()
+    return db.query(BrandDocument).filter(BrandDocument.brand_id == brand.id).order_by(BrandDocument.created_at.desc()).all()
+
+@router.post("/documents", response_model=BrandDocumentResponse)
+def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    category: Optional[str] = Form("Uncategorized"),
+    db: Session = Depends(get_db),
+    brand: Brand = Depends(get_current_brand),
+    current_user: User = Depends(deps.get_current_user)
+):
+    # Validate extension
+    allowed_extensions = ['.pdf', '.docx', '.txt', '.md', '.csv']
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported file format. Supported formats: {', '.join(allowed_extensions)}")
+        
+    # Secure filename and paths
+    # Using uuid for storage filename to prevent path traversal and arbitrary overwrites
+    safe_filename = f"{uuid.uuid4()}{ext}"
+    brand_storage_dir = os.path.join(STORAGE_DIR, str(brand.workspace_id), str(brand.id))
+    os.makedirs(brand_storage_dir, exist_ok=True)
+    
+    file_path = os.path.join(brand_storage_dir, safe_filename)
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        
+    file_size = os.path.getsize(file_path)
+    
+    # Create DB record
+    doc = BrandDocument(
+        id=uuid.uuid4(),
+        workspace_id=brand.workspace_id,
+        brand_id=brand.id,
+        name=file.filename,
+        type=file.content_type or ext,
+        source="upload",
+        file_path=file_path,
+        file_size=file_size,
+        category=category,
+        processing_status="UPLOADED",
+        retrieval_status="NOT_CONFIGURED",
+        uploaded_by=current_user.id
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    
+    # Trigger processing
+    background_tasks.add_task(process_document, db, str(doc.id))
+    
+    return doc
+
+@router.delete("/documents/{document_id}")
+def delete_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    brand: Brand = Depends(get_current_brand)
+):
+    doc = db.query(BrandDocument).filter(BrandDocument.id == document_id, BrandDocument.brand_id == brand.id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Cleanup file
+    if doc.file_path and os.path.exists(doc.file_path):
+        try:
+            os.remove(doc.file_path)
+        except Exception as e:
+            print(f"Warning: Failed to delete file {doc.file_path}: {str(e)}")
+            
+    # Remove from DB
+    db.delete(doc)
+    db.commit()
+    
+    return {"message": "Document deleted successfully"}
+

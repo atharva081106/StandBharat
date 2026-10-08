@@ -50,7 +50,7 @@ def ai_cmo_chat(
     except AINotConfiguredException:
         return {"status": "AI_NOT_CONFIGURED", "response": ""}
         
-    context_obj = brand_context_service.get_brand_context(db, brand.id)
+    context_obj = brand_context_service.get_brand_context(db, brand.id, brand.workspace_id)
     agent_results = agent_result_service.get_latest_agent_results(db, brand.id)
     
     if context_obj:

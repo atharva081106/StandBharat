@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, Enum, JSON, Integer, Text, Float, Boolean, DateTime, UniqueConstraint
+from sqlalchemy import Column, String, ForeignKey, Enum, JSON, Integer, Text, Float, Boolean, DateTime, UniqueConstraint, func
 from sqlalchemy import Uuid as UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -30,7 +30,7 @@ class Workspace(Base):
 class WorkspaceMember(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('user.id'))
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     role = Column(Enum(UserRole), default=UserRole.VIEWER)
     workspace = relationship("Workspace", back_populates="members")
     
@@ -40,7 +40,7 @@ class WorkspaceMember(Base):
 
 class Brand(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     name = Column(String, nullable=False)
     website_url = Column(String)
     description = Column(Text)
@@ -66,8 +66,8 @@ class Agent(Base):
 
 class AgentTask(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
-    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
     agent_type = Column(String)
     task_type = Column(String)
     priority = Column(Integer, default=0)
@@ -82,8 +82,8 @@ class AgentTask(Base):
 
 class AgentRun(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
-    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
     agent_type = Column(String)
     task_id = Column(UUID(as_uuid=True), ForeignKey('agenttask.id'))
     status = Column(String, default="RUNNING")
@@ -99,22 +99,22 @@ class AgentRun(Base):
 
 class Approval(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     status = Column(String, default="PENDING")
     
 class ContentAsset(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     status = Column(String, default="DRAFT")
 
 class Campaign(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     status = Column(String, default="DRAFT")
     
 class Integration(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'))
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     provider = Column(String)
 
 class Opportunity(Base):
@@ -267,9 +267,19 @@ class BrandDocument(Base):
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
     name = Column(String, nullable=False)
-    type = Column(String)
+    type = Column(String) # mime type or extension
     source = Column(String)
     status = Column(String, default="active")
+    
+    # New fields for Phase 5
+    file_path = Column(String, nullable=True)
+    file_size = Column(Integer, default=0)
+    category = Column(String, default="Uncategorized")
+    processing_status = Column(String, default="UPLOADED") # UPLOADED, PROCESSING, READY, FAILED, UNSUPPORTED
+    retrieval_status = Column(String, default="NOT_CONFIGURED") # READY, NOT_CONFIGURED
+    uploaded_by = Column(UUID(as_uuid=True), ForeignKey('user.id'), nullable=True)
+    extracted_text = Column(Text, nullable=True)
+    
     metadata_json = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -378,3 +388,31 @@ from app.publishing.models import PublisherConnection, Publication, PublicationA
 
 from app.models.performance import PerformanceSnapshot
 
+class WebsiteAnalysis(Base):
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    status = Column(String, default="NOT_ANALYZED") # NOT_ANALYZED, QUEUED, RUNNING, COMPLETED, FAILED
+    url = Column(String)
+    result_metadata = Column(JSON, nullable=True) # basic SEO extracted fields
+    analysis_results = Column(JSON, nullable=True) # business context and inferences
+    errors = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+
+class Notification(Base):
+    __tablename__ = 'notifications'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), index=True)
+    brand_id = Column(UUID(as_uuid=True), index=True, nullable=True)
+    user_id = Column(UUID(as_uuid=True), nullable=True)
+    type = Column(String)
+    title = Column(String)
+    message = Column(String)
+    severity = Column(String)
+    read = Column(Boolean, default=False)
+    entity_type = Column(String, nullable=True)
+    entity_id = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

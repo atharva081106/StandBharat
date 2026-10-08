@@ -1,10 +1,13 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export class ApiClient {
+  static defaultHeaders: Record<string, string> = {}
+
   static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${BASE_URL}${endpoint}`
     const headers = {
       'Content-Type': 'application/json',
+      ...this.defaultHeaders,
       ...options.headers,
     }
     const response = await fetch(url, {

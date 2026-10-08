@@ -43,8 +43,9 @@ def update_brand(
     db: Session = Depends(deps.get_db),
     context: dict = Depends(deps.require_role(["OWNER", "ADMIN"]))
 ):
-    if "name" in brand_in:
-        brand.name = brand_in["name"]
+    for field in ["name", "website_url", "description", "industry", "category", "location", "mission", "vision", "values", "tagline", "status"]:
+        if field in brand_in:
+            setattr(brand, field, brand_in[field])
     db.commit()
     db.refresh(brand)
     return brand

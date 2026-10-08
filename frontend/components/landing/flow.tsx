@@ -6,6 +6,7 @@ import { useGSAP } from '@gsap/react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowDown, ArrowRight, CheckCircle2, Crown, FileText, Search, PenTool, BarChart3, Rocket, MessageSquare, Megaphone, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
 
@@ -97,28 +98,6 @@ export function WorkflowFlow() {
   const container = useRef<HTMLDivElement>(null)
 
   useGSAP(() => {
-    const elements = gsap.utils.toArray('.gsap-reveal') as HTMLElement[]
-    
-    elements.forEach((el) => {
-      const delay = parseFloat(el.dataset.delay || '0')
-      
-      gsap.fromTo(el, 
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 1,
-          delay: delay,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 85%',
-            toggleActions: 'play none none none'
-          }
-        }
-      )
-    })
-
     const parallaxElements = gsap.utils.toArray('.gsap-parallax') as HTMLElement[]
     parallaxElements.forEach((el) => {
       const speed = parseFloat(el.dataset.speed || '1')
@@ -246,7 +225,7 @@ export function WorkflowFlow() {
                      {/* Front card */}
                      <div className="gsap-parallax absolute top-2 right-16 w-[140px] h-[180px] bg-white rounded-xl p-4 shadow-2xl transform -rotate-6 z-20 flex flex-col items-center border border-white/20" data-speed="-0.6">
                         <div className="flex items-center gap-1.5 mb-4 w-full">
-                           <div className="w-5 h-5 bg-[#800020] rounded-[4px] flex items-center justify-center text-[8px] font-bold text-white tracking-tighter">SB</div>
+                           <Image src="/logo.jpg" alt="StandBharat Logo" width={18} height={18} className="rounded object-contain brightness-90 contrast-125 border border-black/5" />
                            <div className="text-[9px] font-bold text-black tracking-tight">StandBharat</div>
                         </div>
                         <div className="text-xs font-extrabold text-black mb-3 leading-tight w-full">Go-To-Market Strategy</div>

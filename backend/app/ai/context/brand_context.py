@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
-from app.models.all_models import Brand, BrandVoice, Audience, Product, Positioning, Goal, Competitor, BrandStrategy, BrandDocument
+from fastapi import HTTPException
+from app.models.all_models import Brand, BrandVoice, Audience, Product, Positioning, Goal, Competitor, BrandStrategy, BrandDocument, WebsiteAnalysis
 from app.schemas.brand_brain import BrandContextResponse
 
 class BrandContextService:
-    def get_brand_context(self, db: Session, brand_id: UUID) -> BrandContextResponse:
-        brand = db.query(Brand).filter(Brand.id == brand_id).first()
+    def get_brand_context(self, db: Session, brand_id: UUID, workspace_id: UUID) -> BrandContextResponse:
+        brand = db.query(Brand).filter(Brand.id == brand_id, Brand.workspace_id == workspace_id).first()
         if not brand:
-            return None
+            raise HTTPException(status_code=403, detail="Brand not found in this workspace")
             
         voice = db.query(BrandVoice).filter(BrandVoice.brand_id == brand.id).first()
         audiences = db.query(Audience).filter(Audience.brand_id == brand.id).all()
@@ -17,6 +18,7 @@ class BrandContextService:
         competitors = db.query(Competitor).filter(Competitor.brand_id == brand.id).all()
         strategy = db.query(BrandStrategy).filter(BrandStrategy.brand_id == brand.id).first()
         documents = db.query(BrandDocument).filter(BrandDocument.brand_id == brand.id).all()
+        website_analysis = db.query(WebsiteAnalysis).filter(WebsiteAnalysis.brand_id == brand.id).first()
         
         return BrandContextResponse(
             brand=brand,
@@ -27,7 +29,8 @@ class BrandContextService:
             goals=goals,
             competitors=competitors,
             strategy=strategy,
-            documents=documents
+            documents=documents,
+            website_analysis=website_analysis
         )
 
 brand_context_service = BrandContextService()

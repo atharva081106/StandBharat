@@ -14,10 +14,13 @@ export const metadata: Metadata = {
   description: 'StandBharat connects your brand intelligence, AI CMO, specialized agents, content, execution and performance into one continuous marketing system.',
 }
 
+import { SmoothScroll } from '@/components/lenis-provider'
+
 export default function LandingPage() {
   return (
     <div className={`min-h-screen flex flex-col bg-[#FAF8F3] selection:bg-[#800020] selection:text-white ${outfit.className}`}>
-            {/* Global Background Graphics */}
+      <SmoothScroll />
+      {/* Global Background Graphics */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#800020] blur-[150px] opacity-[0.05] mix-blend-multiply animate-pulse" style={{ animationDuration: '8s' }} />
         <div className="absolute top-[30%] right-[-5%] w-[40%] h-[50%] rounded-full bg-[#5C0017] blur-[120px] opacity-[0.05] mix-blend-multiply animate-pulse" style={{ animationDuration: '12s' }} />

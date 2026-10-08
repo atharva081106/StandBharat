@@ -15,3 +15,19 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     }
     return response.json();
 }
+
+
+export const notificationsApi = {
+  getNotifications: async () => {
+    return fetchApi('/api/notifications');
+  },
+  getUnreadCount: async () => {
+    return fetchApi('/api/notifications/unread-count');
+  },
+  markAsRead: async (id: string) => {
+    return fetchApi('/api/notifications/' + id + '/read', { method: 'PATCH' });
+  },
+  markAllAsRead: async () => {
+    return fetchApi('/api/notifications/read-all', { method: 'POST' });
+  }
+};

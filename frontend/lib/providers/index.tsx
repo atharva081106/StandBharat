@@ -1,6 +1,6 @@
 "use client"
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { AuthProvider as IAuthProvider, AgentProvider, DashboardProvider, OpportunityProvider, AiCmoProvider, BrandBrainProvider } from './types/interfaces';
+import { AuthProvider as IAuthProvider, AgentProvider, DashboardProvider, OpportunityProvider, AiCmoProvider, BrandBrainProvider, NotificationProvider } from './types/interfaces';
 import { MockAgentProvider } from './mock/MockAgentProvider';
 import { MockDashboardProvider } from './mock/MockDashboardProvider';
 import { ApiAgentProvider } from './api/ApiAgentProvider';
@@ -27,6 +27,7 @@ interface AppContextType {
   aiCmo: AiCmoProvider;
   brandBrain: BrandBrainProvider;
   orchestrator: OrchestratorProvider;
+  notifications: NotificationProvider;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,12 +37,69 @@ import { ApiClient } from '../api/client';
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [user, setUser] = useState<any | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<any | null>(null);
+  const [activeBrand, setActiveBrand] = useState<any | null>(null);
   
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  const fetchNotifications = async () => {
+    if (DATA_MODE === 'api' && ApiClient.defaultHeaders['X-Brand-ID']) {
+      try {
+        const notifs = await ApiClient.get<any[]>('/api/notifications');
+        const unread = await ApiClient.get<any>('/api/notifications/unread-count');
+        setNotifications(notifs);
+        setUnreadCount(unread.unread_count);
+      } catch (e) {}
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    if (DATA_MODE === 'api') {
+      try {
+        await ApiClient.patch('/api/notifications/' + id + '/read', {});
+        await fetchNotifications();
+      } catch (e) {}
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (DATA_MODE === 'api') {
+      try {
+        await ApiClient.post('/api/notifications/read-all', {});
+        await fetchNotifications();
+      } catch (e) {}
+    }
+  };
+
+  
+  const fetchWorkspaceContext = async () => {
+    try {
+      const workspaces = await ApiClient.get<any[]>('/api/workspaces/');
+      if (workspaces.length > 0) {
+        const ws = workspaces[0];
+        setActiveWorkspace(ws);
+        ApiClient.defaultHeaders['X-Workspace-ID'] = ws.id;
+
+        const brands = await ApiClient.get<any[]>('/api/brands/');
+        if (brands.length > 0) {
+          const br = brands[0];
+          setActiveBrand(br);
+          ApiClient.defaultHeaders['X-Brand-ID'] = br.id;
+        }
+      }
+      await fetchNotifications();
+    } catch (e) {
+      console.error("Failed to load workspace context", e);
+    }
+  };
+
   const checkAuth = async () => {
     if (DATA_MODE === 'api') {
       try {
         const u = await ApiClient.get<any>('/api/auth/me');
         setUser(u);
+        await fetchWorkspaceContext();
         setAuthState('loggedIn');
       } catch (e) {
         setUser(null);
@@ -49,7 +107,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       if (authState === 'loading') {
-        setAuthState('loggedOut');
+        setActiveWorkspace(mockWorkspaces[0]);
+        setActiveBrand(mockBrands[0]);
+        setAuthState('loggedOut'); // Wait, the original set 'loggedOut' if loading. Let's keep that but set mock contexts.
       }
     }
   };
@@ -64,6 +124,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await checkAuth();
     } else {
       setUser(mockUser);
+      setActiveWorkspace(mockWorkspaces[0]);
+      setActiveBrand(mockBrands[0]);
       setAuthState('loggedIn');
     }
   };
@@ -74,15 +136,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await login(email, password);
     } else {
       setUser(mockUser);
+      setActiveWorkspace(mockWorkspaces[0]);
+      setActiveBrand(mockBrands[0]);
       setAuthState('loggedIn');
     }
   };
 
   const logout = async () => {
     if (DATA_MODE === 'api') {
-      await ApiClient.post('/api/auth/logout', {});
+      try { await ApiClient.post('/api/auth/logout', {}); } catch(e){}
     }
     setUser(null);
+    setActiveWorkspace(null);
+    setActiveBrand(null);
+    ApiClient.defaultHeaders = {};
     setAuthState('loggedOut');
   };
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
@@ -91,8 +158,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     authState,
     setAuthState,
     user,
-    activeWorkspace: mockWorkspaces[0],
-    activeBrand: mockBrands[0],
+    activeWorkspace,
+    activeBrand,
     login,
     signup,
     logout,
@@ -110,9 +177,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       opportunity: isApi ? new ApiOpportunityProvider() : new MockOpportunityProvider(),
       aiCmo: isApi ? new ApiAiCmoProvider() : new MockAiCmoProvider(),
       brandBrain: isApi ? new ApiBrandBrainProvider() : new MockBrandBrainProvider(),
-      orchestrator: isApi ? ApiOrchestratorProvider : MockOrchestratorProvider
+      orchestrator: isApi ? ApiOrchestratorProvider : MockOrchestratorProvider,
+      notifications: { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead }
     };
-  }, [authState, user, authModalOpen]);
+  }, [authState, user, activeWorkspace, activeBrand, authModalOpen, notifications, unreadCount]);
 
   return <AppContext.Provider value={providers}>{children}</AppContext.Provider>;
 }

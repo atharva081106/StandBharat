@@ -2,17 +2,19 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
+import { TrendingUp, UserSearch, FileText, BarChart2, Eye, Terminal, Users, Star } from 'lucide-react'
 
 const AGENTS = [
-  { name: 'Growth Agent', desc: 'Find high-impact opportunities.', iconPath: 'M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941' },
-  { name: 'SEO Agent', desc: 'Find gaps, draft pages.', iconPath: 'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z' },
-  { name: 'Content Writer Agent', desc: 'Draft in your brand voice.', iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
-  { name: 'Analytics Agent', desc: "Surface what's working.", iconPath: 'M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z' },
-  { name: 'Competitor Agent', desc: 'Monitor and exploit gaps.', iconPath: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178zM15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-  { name: 'Content Strategy Agent', desc: 'Build data-driven briefs.', iconPath: 'M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z' },
-  { name: 'Audience Agent', desc: "Understand who's listening.", iconPath: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z' },
-  { name: 'Brand Voice Agent', desc: 'Keep every word on-brand.', iconPath: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z' },
+  { name: 'Growth Agent', desc: 'Find high-impact opportunities.', icon: TrendingUp, color: '#34A853' },
+  { name: 'SEO Agent', desc: 'Find gaps, draft pages.', icon: UserSearch, color: '#E91E63' },
+  { name: 'Content Writer Agent', desc: 'Draft in your brand voice.', icon: FileText, color: '#FBBC04' },
+  { name: 'Analytics Agent', desc: "Surface what's working.", icon: BarChart2, color: '#4285F4' },
+  { name: 'Competitor Agent', desc: 'Monitor and exploit gaps.', icon: Eye, color: '#EA4335' },
+  { name: 'Content Strategy Agent', desc: 'Build data-driven briefs.', icon: Terminal, color: '#9333EA' },
+  { name: 'Audience Agent', desc: "Understand who's listening.", icon: Users, color: '#00ACC1' },
+  { name: 'Brand Voice Agent', desc: 'Keep every word on-brand.', icon: Star, color: '#F57C00' },
 ]
 
 const INTEGRATIONS = [
@@ -37,13 +39,7 @@ const INTEGRATIONS = [
   { name: 'Slack', desc: 'Drafts and approvals.', soon: true, icon: <svg viewBox="0 0 24 24" fill="#4A154B" className="w-5 h-5"><path d="M5.04 15.27a2.38 2.38 0 01-2.38 2.38 2.38 2.38 0 01-2.38-2.38c0-1.3.99-2.37 2.27-2.38h2.49v2.38zm1.19-2.38a2.38 2.38 0 012.38-2.38 2.38 2.38 0 012.38 2.38v5.94a2.38 2.38 0 11-4.76 0v-5.94zM8.73 5.04A2.38 2.38 0 016.35 2.66 2.38 2.38 0 018.73.28c1.3 0 2.37.99 2.38 2.27v2.49H8.73zm2.38 1.19a2.38 2.38 0 012.38 2.38 2.38 2.38 0 01-2.38 2.38H5.17a2.38 2.38 0 110-4.76h5.94zm7.85 2.5a2.38 2.38 0 012.38-2.38 2.38 2.38 0 012.38 2.38c0 1.3-.99 2.37-2.27 2.38h-2.49V8.73zm-1.19 2.38a2.38 2.38 0 01-2.38 2.38 2.38 2.38 0 01-2.38-2.38V5.17a2.38 2.38 0 114.76 0v5.94zM15.27 18.96a2.38 2.38 0 012.38 2.38 2.38 2.38 0 01-2.38 2.38c-1.3 0-2.37-.99-2.38-2.27v-2.49h2.38zm-2.38-1.19a2.38 2.38 0 01-2.38-2.38 2.38 2.38 0 012.38-2.38h5.94a2.38 2.38 0 110 4.76h-5.94z"/></svg> },
 ]
 
-function AgentIcon({ path }: { path: string }) {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d={path} />
-    </svg>
-  )
-}
+// Removed AgentIcon helper as we now use Lucide icons directly
 
 function AgentsDropdown() {
   return (
@@ -56,12 +52,16 @@ function AgentsDropdown() {
               key={i}
               href="#product"
               className="flex items-start gap-3 p-3.5 rounded-xl hover:bg-[#FAF8F3] group transition-colors duration-150"
+              style={{ '--agent-color': agent.color } as React.CSSProperties}
             >
-              <div className="mt-0.5 w-9 h-9 rounded-xl bg-[#F5E6E8] text-[#800020] flex items-center justify-center shrink-0 group-hover:bg-[#800020] group-hover:text-white transition-all duration-150">
-                <AgentIcon path={agent.iconPath} />
+              <div 
+                className="mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150 group-hover:!bg-[var(--agent-color)] group-hover:!text-white"
+                style={{ backgroundColor: `${agent.color}20`, color: agent.color }}
+              >
+                <agent.icon className="w-5 h-5" strokeWidth={1.8} />
               </div>
               <div>
-                <div className="text-sm font-bold text-[#111111] group-hover:text-[#800020] transition-colors duration-150 leading-tight">
+                <div className="text-sm font-bold text-[#111111] group-hover:!text-[var(--agent-color)] transition-colors duration-150 leading-tight">
                   {agent.name}
                 </div>
                 <div className="text-[11px] text-[#858585] font-medium mt-0.5 leading-snug">{agent.desc}</div>
@@ -160,14 +160,11 @@ export function MarketingNavbar() {
     <header className="sticky top-0 z-50 bg-[#FAF8F3]/90 backdrop-blur-md border-b border-[#E8E4DC]">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/landingpage" className="flex items-center gap-2 shrink-0">
-          <div className="w-6 h-6 rounded-md bg-[#800020] flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-white" />
-          </div>
+          <Image src="/logo.jpg" alt="StandBharat Logo" width={28} height={28} className="rounded-lg object-contain shadow-sm border border-black/5" />
           <span className="font-bold text-lg tracking-tight text-[#111111]">StandBharat</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
-          <Link href="#product" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">Product</Link>
           <Link href="#ai-cmo" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">AI CMO</Link>
 
           <div
@@ -212,8 +209,8 @@ export function MarketingNavbar() {
             </div>
           </div>
 
-          <Link href="#solutions" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">Solutions</Link>
-          <Link href="/#pricing" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">Pricing</Link>
+          <Link href="#ai-cmo" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">Solutions</Link>
+          <Link href="#pricing" className="text-sm font-semibold text-[#5A5A5A] hover:text-[#800020] transition-colors">Pricing</Link>
         </nav>
 
         <div className="hidden lg:flex items-center gap-4 shrink-0">
@@ -242,7 +239,6 @@ export function MarketingNavbar() {
       {mobileMenuOpen && (
         <div className="lg:hidden absolute top-16 left-0 right-0 bg-white border-b border-[#E8E4DC] p-6 shadow-xl flex flex-col gap-6 z-40 max-h-[85vh] overflow-y-auto">
           <nav className="flex flex-col gap-4">
-            <Link href="#product" className="text-base font-bold text-[#111111]" onClick={() => setMobileMenuOpen(false)}>Product</Link>
             <Link href="#ai-cmo" className="text-base font-bold text-[#111111]" onClick={() => setMobileMenuOpen(false)}>AI CMO</Link>
             
             <div>
@@ -267,8 +263,8 @@ export function MarketingNavbar() {
               </div>
             </div>
 
-            <Link href="#solutions" className="text-base font-bold text-[#111111] mt-2" onClick={() => setMobileMenuOpen(false)}>Solutions</Link>
-            <Link href="/#pricing" className="text-base font-bold text-[#111111]" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+            <Link href="#ai-cmo" className="text-base font-bold text-[#111111] mt-2" onClick={() => setMobileMenuOpen(false)}>Solutions</Link>
+            <Link href="#pricing" className="text-base font-bold text-[#111111]" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
           </nav>
           <div className="flex flex-col gap-4 pt-4 border-t border-[#E8E4DC]">
             <Link href="#" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new Event('open-auth-login')); setMobileMenuOpen(false); }}>

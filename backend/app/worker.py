@@ -26,7 +26,7 @@ def execute_agent_task(self, task_id_str: str, run_id_str: str):
         try:
             agent = agent_registry.get_agent(task.agent_type)
             
-            b_ctx = brand_context_service.get_brand_context(db, task.brand_id)
+            b_ctx = brand_context_service.get_brand_context(db, task.brand_id, task.workspace_id)
             context = AgentContext(
                 task_id=task_id,
                 run_id=run_id,
