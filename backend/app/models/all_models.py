@@ -84,18 +84,15 @@ class AgentRun(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
     brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
-    agent_type = Column(String)
-    task_id = Column(UUID(as_uuid=True), ForeignKey('agenttask.id'))
-    status = Column(String, default="RUNNING")
-    input_data = Column(JSON)
-    output_data = Column(JSON)
-    provider = Column(String)
-    model = Column(String)
-    started_at = Column(DateTime(timezone=True))
-    completed_at = Column(DateTime(timezone=True))
-    duration = Column(Float)
+    agent_id = Column(String)
+    status = Column(String, default="QUEUED")
+    trigger_type = Column(String, default="MANUAL")
+    input_context = Column(JSON)
+    output = Column(JSON)
     error = Column(Text)
-    retry_count = Column(Integer, default=0)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
 class Approval(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -262,6 +259,18 @@ class BrandStrategy(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class StrategyDocument(Base):
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    type = Column(String, index=True) # e.g. "MARKETING_STRATEGY", "ICP", "BRAND_VOICE"
+    version = Column(Integer, default=1)
+    status = Column(String, default="ACTIVE") # ACTIVE, STALE, ARCHIVED
+    content = Column(JSON) # Structured payload of the strategy
+    source_context = Column(JSON) # Hashes or references of the data used to generate it
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class BrandDocument(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
@@ -283,6 +292,33 @@ class BrandDocument(Base):
     metadata_json = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class IntegrationSyncRun(Base):
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    integration_id = Column(UUID(as_uuid=True), ForeignKey('integration.id'), index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    provider_id = Column(String, index=True)
+    status = Column(String, default="RUNNING") # RUNNING, SUCCESS, FAILED
+    records_processed = Column(Integer, default=0)
+    error = Column(String, nullable=True)
+    duration = Column(Float, nullable=True)
+    started_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+class AgentHandoff(Base):
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    source_agent = Column(String, index=True)
+    destination_agent = Column(String, index=True)
+    source_run_id = Column(UUID(as_uuid=True), ForeignKey('agentrun.id'), index=True)
+    destination_run_id = Column(UUID(as_uuid=True), ForeignKey('agentrun.id'), index=True, nullable=True)
+    input_context = Column(JSON)
+    output_reference = Column(JSON)
+    status = Column(String, default="PENDING") # PENDING, RUNNING, COMPLETED, FAILED
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
 class OrchestratorConfig(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

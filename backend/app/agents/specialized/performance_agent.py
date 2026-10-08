@@ -22,11 +22,8 @@ class PerformanceAgent(BaseAgent):
     
     def execute(self, context: AgentContext) -> AgentResult:
         result = AgentResult(
-            agent_id=self.agent_id,
-            run_id=context.run_id,
-            status="success",
-            findings={},
-            actions_taken=[]
+            status="SUCCESS",
+            output_data={"findings": {}, "actions_taken": []}
         )
         
         db = SessionLocal()
@@ -39,7 +36,7 @@ class PerformanceAgent(BaseAgent):
             ).order_by(PerformanceSnapshot.captured_at.desc()).limit(50).all()
             
             if not snapshots:
-                result.findings["message"] = "No performance data available for analysis"
+                result.output_data["findings"]["message"] = "No performance data available for analysis"
                 return result
                 
             snapshot_data = []
@@ -136,7 +133,7 @@ class PerformanceAgent(BaseAgent):
                 result.error = f"Failed to parse LLM response: {str(e)}"
                 return result
                 
-            result.findings["signals"] = parsed.get("signals", [])
+            result.output_data["findings"]["signals"] = parsed.get("signals", [])
             
             created_opportunities = []
             for opp_data in parsed.get("opportunities", []):
@@ -162,9 +159,9 @@ class PerformanceAgent(BaseAgent):
                     
             db.commit()
             
-            result.findings["opportunities_created"] = len(created_opportunities)
+            result.output_data["findings"]["opportunities_created"] = len(created_opportunities)
             if created_opportunities:
-                result.actions_taken.append(f"Created {len(created_opportunities)} opportunities")
+                result.output_data["actions_taken"].append(f"Created {len(created_opportunities)} opportunities")
             
             return result
             

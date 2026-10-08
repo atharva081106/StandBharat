@@ -8,9 +8,27 @@ export function AudiencePanel() {
   const [audiences, setAudiences] = useState<any[]>([])
 
   useEffect(() => {
-    if (brandBrain?.audiences) {
-      setAudiences(brandBrain.audiences)
+    const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
+    let initialAudiences = brandBrain?.audiences || [];
+    if (initialAudiences.length === 0 && !isApi) {
+      try {
+        const obData = localStorage.getItem('onboardingData');
+        if (obData) {
+          const parsed = JSON.parse(obData);
+          if (parsed.targetDemographic) {
+            initialAudiences = [
+              {
+                id: 'onboarding-audience-1',
+                name: parsed.targetDemographic,
+                demographics: parsed.targetDemographic,
+                pain_points: parsed.customerPainPoints || 'Not specified'
+              }
+            ]
+          }
+        }
+      } catch(e) {}
     }
+    setAudiences(initialAudiences);
   }, [brandBrain])
 
   if (loading) {

@@ -26,18 +26,27 @@ export function BusinessOverviewPanel() {
 
   // Initialize with activeBrand data (from auth context) when loaded
   useEffect(() => {
+    const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
+    let obData: any = {};
+    if (!isApi) {
+      try {
+        const stored = localStorage.getItem('onboardingData');
+        if (stored) obData = JSON.parse(stored);
+      } catch(e) {}
+    }
+
     if (activeBrand) {
       // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
       setFormData({
-        name: activeBrand.name || '',
-        website_url: activeBrand.website_url || '',
+        name: activeBrand.name || obData.businessName || '',
+        website_url: activeBrand.website_url || obData.website || '',
         industry: activeBrand.industry || '',
         category: activeBrand.category || '',
         location: activeBrand.location || '',
-        mission: activeBrand.mission || '',
-        vision: activeBrand.vision || '',
+        mission: activeBrand.mission || obData.valueProposition || '',
+        vision: activeBrand.vision || obData.primaryObjective || '',
         values: activeBrand.values || '',
-        tagline: activeBrand.tagline || ''
+        tagline: activeBrand.tagline || obData.description || ''
       })
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false)

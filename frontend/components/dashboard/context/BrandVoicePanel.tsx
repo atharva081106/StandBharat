@@ -8,9 +8,24 @@ export function BrandVoicePanel() {
   const [voice, setVoice] = useState<any>(null)
 
   useEffect(() => {
-    if (brandBrain?.voice) {
-      setVoice(brandBrain.voice)
+    const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
+    let initialVoice = brandBrain?.voice || null;
+    if (!initialVoice && !isApi) {
+      try {
+        const obData = localStorage.getItem('onboardingData');
+        if (obData) {
+          const parsed = JSON.parse(obData);
+          if (parsed.brandVoice && parsed.brandVoice.length > 0) {
+            initialVoice = {
+              personality: parsed.brandVoice.join(', '),
+              formality: parsed.brandVoice.includes('Professional') ? 'Professional' : 'Casual',
+              tone: parsed.brandVoice.join(', ')
+            }
+          }
+        }
+      } catch(e) {}
     }
+    setVoice(initialVoice);
   }, [brandBrain])
 
   if (loading) {

@@ -17,6 +17,18 @@ class ContentWriterAgent(BaseAgent):
             description="Generates content drafts based on content briefs and brand context.",
             capabilities=["content_draft_generation"]
         )
+        from app.agents.definition import AgentDefinition
+        self.definition = AgentDefinition(
+            id=self.agent_id,
+            name=self.name,
+            description=self.description,
+            category="CONTENT",
+            capabilities=self.capabilities,
+            required_integrations=[],
+            input_schema={"type": "object", "properties": {"brief_id": {"type": "string"}}},
+            output_schema={"type": "object"},
+            approval_policy="DEFAULT"
+        )
 
     def execute(self, context: AgentContext) -> AgentResult:
         db = SessionLocal()
@@ -50,13 +62,20 @@ Output JSON only without markdown blocks.
 """
 
             brand_voice = ""
-            if context.brand_context and hasattr(context.brand_context, 'brand_voice') and context.brand_context.brand_voice:
-                bv = context.brand_context.brand_voice
-                brand_voice = f"Tone: {bv.tone}\nStyle: {bv.writing_style}\nRules: {bv.messaging_rules}"
+            if "brand_voice" in context.brand_context:
+                bv = context.brand_context.get("brand_voice", {})
+                brand_voice = f"Tone: {bv.get('tone')}\nStyle: {bv.get('writing_style')}\nRules: {bv.get('messaging_rules')}"
+
+            strategy = ""
+            if "strategy" in context.brand_context:
+                strategy = json.dumps(context.brand_context["strategy"], indent=2)
 
             user_msg = f"""
 Brand Voice & Rules:
 {brand_voice}
+
+Strategy Documents (Content/Marketing strategy, Positioning, etc):
+{strategy}
 
 Content Brief:
 Title: {brief.title}

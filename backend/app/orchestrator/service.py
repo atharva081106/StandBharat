@@ -5,7 +5,7 @@ from typing import Optional, List
 from app.models.all_models import OrchestratorConfig, OrchestrationRun, AgentTask, AgentRun
 from app.orchestrator.decision_engine import decision_engine
 from app.agents.registry import agent_registry
-from app.worker import execute_agent_task
+from app.worker import execute_generic_agent
 
 class OrchestratorService:
     def get_config(self, db: Session, brand_id: UUID) -> OrchestratorConfig:
@@ -47,7 +47,7 @@ class OrchestratorService:
             # Check if agent is already queued or running
             is_active = db.query(AgentRun).filter(
                 AgentRun.brand_id == config.brand_id,
-                AgentRun.agent_type == agent_id,
+                AgentRun.agent_id == agent_id,
                 AgentRun.status.in_(["RUNNING", "QUEUED"]) # QUEUED is mostly used for tasks but let's be safe
             ).first() is not None
             
@@ -109,15 +109,14 @@ class OrchestratorService:
         run = AgentRun(
             workspace_id=workspace_id,
             brand_id=brand_id,
-            agent_type=agent_type,
-            task_id=task.id,
+            agent_id=agent_type,
             status="QUEUED"
         )
         db.add(run)
         db.commit()
         db.refresh(run)
 
-        execute_agent_task.delay(str(task.id), str(run.id))
+        execute_generic_agent.delay(str(run.id))
 
 
 orchestrator_service = OrchestratorService()

@@ -26,6 +26,7 @@ class AIGateway:
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 1000,
+        tools: Optional[List[Dict[str, Any]]] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> AIResponse:
         
@@ -40,6 +41,7 @@ class AIGateway:
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
+            tools=tools,
             metadata=metadata
         )
 

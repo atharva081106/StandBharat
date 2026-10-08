@@ -105,9 +105,39 @@ def ai_cmo_chat(
         AIRequestMessage(role="user", content=req.message)
     ]
     
+    from app.ai.context.cmo_tools import CMO_TOOLS, execute_cmo_tool
+    
     try:
-        res = ai_gateway.generate(messages=messages, max_tokens=300)
-        return {"status": "SUCCESS", "response": res.content}
+        res = ai_gateway.generate(messages=messages, max_tokens=1000, tools=CMO_TOOLS)
+        
+        # Handle tool calling loop
+        if res.tool_calls:
+            # We add the assistant message
+            messages.append(AIRequestMessage(
+                role="assistant", 
+                content=res.content or "", 
+                tool_calls=res.tool_calls
+            ))
+            
+            for tc in res.tool_calls:
+                tool_res_content = execute_cmo_tool(
+                    db=db,
+                    workspace_id=brand.workspace_id,
+                    brand_id=brand.id,
+                    user_id=current_user.id,
+                    tool_name=tc.function["name"],
+                    arguments=json.loads(tc.function["arguments"])
+                )
+                messages.append(AIRequestMessage(
+                    role="tool",
+                    content=tool_res_content,
+                    tool_call_id=tc.id
+                ))
+            
+            # Second generation call
+            res = ai_gateway.generate(messages=messages, max_tokens=1000, tools=CMO_TOOLS)
+            
+        return {"status": "SUCCESS", "response": res.content or ""}
     except AINotConfiguredException:
         return {"status": "AI_NOT_CONFIGURED", "response": ""}
     except __import__("app.ai.exceptions").ai.exceptions.AIAuthException:

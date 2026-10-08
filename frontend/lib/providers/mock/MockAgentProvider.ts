@@ -17,7 +17,7 @@ export class MockAgentProvider implements AgentProvider {
   async getAgentRun(runId: string): Promise<any> {
     return { id: runId, status: "COMPLETED", result_data: { summary: "Mock result" } };
   }
-  async getAgentRuns(agentId: string): Promise<any[]> {
+  async getAgentRuns(agentId?: string): Promise<any[]> {
     return [
       { id: "mock-run-123", agent_id: agentId, status: "SUCCESS", created_at: new Date(Date.now() - 3600000).toISOString(), result_data: { summary: "Analysis complete. Detected 3 new opportunities." } },
       { id: "mock-run-456", agent_id: agentId, status: "SUCCESS", created_at: new Date(Date.now() - 86400000).toISOString(), result_data: { summary: "Generated content brief for Enterprise AI Marketing." } }

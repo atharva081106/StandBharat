@@ -17,14 +17,14 @@ def list_agent_runs(
     try:
         query = db.query(AgentRun).filter(AgentRun.brand_id == brand.id)
         if agent_id:
-            query = query.filter(AgentRun.agent_type == agent_id)
+            query = query.filter(AgentRun.agent_id == agent_id)
         
         runs = query.order_by(AgentRun.created_at.desc()).all()
         return [{
             "id": str(r.id),
-            "agent_id": r.agent_type,
+            "agent_id": r.agent_id,
             "status": r.status,
-            "result_data": r.output_data,
+            "result_data": r.output,
             "error_message": r.error,
             "created_at": r.created_at
         } for r in runs]
@@ -48,9 +48,9 @@ def get_agent_run(
             
         return {
             "id": str(run.id),
-            "agent_id": run.agent_type,
+            "agent_id": run.agent_id,
             "status": run.status,
-            "result_data": run.output_data,
+            "result_data": run.output,
             "error_message": run.error,
             "created_at": run.created_at
         }

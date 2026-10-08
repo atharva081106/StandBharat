@@ -7,52 +7,86 @@ from app.ai.context.brand_context import brand_context_service
 import uuid
 import datetime
 
-@celery_app.task(bind=True, max_retries=3)
-def execute_agent_task(self, task_id_str: str, run_id_str: str):
+def _execute_agent_run(run_id_str: str):
     db = SessionLocal()
     try:
-        task_id = uuid.UUID(task_id_str)
         run_id = uuid.UUID(run_id_str)
-        
         run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
-        task = db.query(AgentTask).filter(AgentTask.id == task_id).first()
         
-        if not run or not task:
+        if not run:
             return
             
         run.status = "RUNNING"
         db.commit()
         
         try:
-            agent = agent_registry.get_agent(task.agent_type)
+            agent = agent_registry.get_agent(run.agent_id)
             
-            b_ctx = brand_context_service.get_brand_context(db, task.brand_id, task.workspace_id)
+            b_ctx = brand_context_service.get_brand_context(db, run.brand_id, run.workspace_id)
             context = AgentContext(
-                task_id=task_id,
                 run_id=run_id,
-                workspace_id=task.workspace_id,
-                brand_id=task.brand_id,
-                user_id=task.created_by,
-                input_data=task.input_data or {},
+                workspace_id=run.workspace_id,
+                brand_id=run.brand_id,
+                user_id=uuid.UUID(int=0) if not b_ctx.brand.user_id else b_ctx.brand.user_id, # Fallback user_id if needed, or query from workspace
+                input_data=run.input_context or {},
                 brand_context=b_ctx
             )
             
-            result = agent.execute(context)
-            
-            run.status = result.status
-            run.output_data = result.output_data
-            if result.error:
-                run.error = result.error
-                
-            task.status = "COMPLETED" if result.status == "SUCCESS" else "FAILED"
+            from app.agents.runtime import AgentRuntime
+            runtime = AgentRuntime(db=db, agent=agent)
+            runtime.execute_task(context)
             
         except Exception as e:
-            run.status = "FAILED"
-            run.error = str(e)
-            task.status = "FAILED"
-            
-        run.completed_at = datetime.datetime.utcnow()
-        db.commit()
+            run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
+            if run:
+                run.status = "FAILED"
+                run.error = str(e)
+                run.completed_at = datetime.datetime.utcnow()
+            db.commit()
         
     finally:
         db.close()
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_seo_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_geo_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_competitor_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_growth_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_content_strategy_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_writer_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_linkedin_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_x_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_reddit_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_coding_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)
+
+@celery_app.task(bind=True, max_retries=3)
+def execute_generic_agent(self, run_id_str: str):
+    _execute_agent_run(run_id_str)

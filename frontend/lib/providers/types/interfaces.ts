@@ -20,7 +20,7 @@ export interface AgentProvider {
   getAgent: (id: string) => Promise<Agent>;
   runAgent: (id: string, payload: any) => Promise<any>;
   getAgentRun: (runId: string) => Promise<any>;
-  getAgentRuns: (agentId: string) => Promise<any[]>;
+  getAgentRuns: (agentId?: string) => Promise<any[]>;
 }
 
 export interface Opportunity {

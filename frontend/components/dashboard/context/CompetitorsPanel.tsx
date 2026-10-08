@@ -8,9 +8,24 @@ export function CompetitorsPanel() {
   const [competitors, setCompetitors] = useState<any[]>([])
 
   useEffect(() => {
-    if (brandBrain?.competitors) {
-      setCompetitors(brandBrain.competitors)
+    const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
+    let initialCompetitors = brandBrain?.competitors || [];
+    if (initialCompetitors.length === 0 && !isApi) {
+      try {
+        const obData = localStorage.getItem('onboardingData');
+        if (obData) {
+          const parsed = JSON.parse(obData);
+          if (parsed.competitors && parsed.competitors.length > 0) {
+            initialCompetitors = parsed.competitors.map((c: string, index: number) => ({
+              id: `onboarding-competitor-${index}`,
+              name: c,
+              positioning: 'To be analyzed'
+            }))
+          }
+        }
+      } catch(e) {}
     }
+    setCompetitors(initialCompetitors);
   }, [brandBrain])
 
   if (loading) {

@@ -6,5 +6,5 @@ export const agentsApi = {
   getAgent: (id: string) => ApiClient.get<Agent>(`/api/agents/${id}`),
   runAgent: (id: string, payload: any) => ApiClient.post<any>(`/api/agents/${id}/run`, payload),
   getAgentRun: (runId: string) => ApiClient.get<any>(`/api/agent-runs/${runId}`),
-  getAgentRuns: (agentId: string) => ApiClient.get<any[]>(`/api/agent-runs?agent_id=${agentId}`)
+  getAgentRuns: (agentId?: string) => ApiClient.get<any[]>(`/api/agent-runs${agentId ? `?agent_id=${agentId}` : ''}`)
 }

@@ -100,4 +100,16 @@ class BrandContextService:
                 "key_messages": positioning.key_messages
             }
 
+        # 8. Fetch Strategy Documents
+        from app.models.all_models import StrategyDocument
+        strategy_docs = db.query(StrategyDocument).filter_by(
+            workspace_id=workspace_id, 
+            brand_id=brand_id, 
+            status="ACTIVE"
+        ).all()
+        
+        context["strategy"] = {}
+        for doc in strategy_docs:
+            context["strategy"][doc.type] = doc.content
+
         return context

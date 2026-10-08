@@ -59,7 +59,11 @@ async def test_performance_agent_process():
         with patch("app.agents.specialized.performance_agent.ai_gateway") as mock_gateway:
             mock_res = MagicMock()
             mock_res.content = '{"signals": [{"type": "TEST", "confidence": "HIGH", "observation": "Obs", "interpretation": "Int", "recommendation": "Rec"}], "opportunities": [{"title": "Test Opp", "description": "Desc", "impact": "HIGH", "confidence": "HIGH", "effort": "LOW"}]}'
+            mock_res.usage.prompt_tokens = 10
+            mock_res.usage.completion_tokens = 20
             mock_gateway.generate.return_value = mock_res
+            mock_gateway._get_provider.return_value.get_name.return_value = "mock_provider"
+            mock_gateway._get_provider.return_value.default_model = "mock_model"
             
             result = agent.execute(context)
         

@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
-import { useAuth, useDashboard, useOrchestrator } from '@/lib/providers/MockProvider'
+import { useAuth, useDashboard, useOrchestrator, useBrandBrain, useAgents } from '@/lib/providers/MockProvider'
 import { 
   Layers, ChevronLeft, ChevronDown, BarChart2, Link as LinkIcon, 
   Globe, FileText, Bot, Search, AlertCircle, ArrowRight, Zap, 
@@ -18,26 +18,56 @@ import { CompetitorsPanel } from '@/components/dashboard/context/CompetitorsPane
 import { useWebsiteAnalysis } from '@/lib/providers/WebsiteAnalysisProvider'
 
 export default function AIWorkspace() {
-  const { activeWorkspace, activeBrand } = useAuth()
+  const auth = useAuth()
+  const { activeWorkspace, activeBrand } = auth
   const dashboardProvider = useDashboard()
   const orchestratorProvider = useOrchestrator()
   const { analysis } = useWebsiteAnalysis()
+  const { brandBrain } = useBrandBrain()
+  const agentsProvider = useAgents()
+  
+  const [agentRuns, setAgentRuns] = useState<any[]>([])
+  const [agentsList, setAgentsList] = useState<any[]>([])
   
   const [activeNav, setActiveNav] = useState('Analytics')
   const [dataModel, setDataModel] = useState<any>(null)
   const [analyticsTab, setAnalyticsTab] = useState('SEO')
   const [cmoTab, setCmoTab] = useState('Chat')
   const [cwvDevice, setCwvDevice] = useState<'desktop' | 'mobile'>('desktop')
+  const [onboardingData, setOnboardingData] = useState<any>(null)
+  const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
+
+  const competitorsList = isApi 
+    ? (brandBrain?.competitors || []).map((c: any) => c.name)
+    : (onboardingData?.competitors?.length > 0 ? onboardingData.competitors : ['HubSpot', 'Zoho', 'Freshworks', 'Hootsuite'])
 
   useEffect(() => {
+    try {
+      const data = localStorage.getItem('onboardingData')
+      if (data) {
+        setOnboardingData(JSON.parse(data))
+      }
+    } catch (e) {}
+
     async function load() {
       try {
         const data = await dashboardProvider.getDashboard()
         setDataModel(data)
+        
+        if (isApi) {
+          try {
+            const [runs, agents] = await Promise.all([
+              agentsProvider.getAgentRuns(),
+              agentsProvider.getAgents()
+            ])
+            setAgentRuns(runs || [])
+            setAgentsList(agents || [])
+          } catch(e) { console.error('Failed to load agent runs', e) }
+        }
       } catch(e) {}
     }
     load()
-  }, [])
+  }, [auth.activeBrand?.id])
 
   return (
     <div className="flex w-full h-full divide-x divide-[#373333]">
@@ -171,7 +201,7 @@ export default function AIWorkspace() {
               <button className="text-[#A9A4A0] hover:text-[#F5F3F1]"><Plus className="w-3.5 h-3.5" /></button>
             </div>
             
-            {['HubSpot', 'Zoho', 'Freshworks', 'Hootsuite'].map(comp => (
+            {competitorsList.map((comp: string) => (
               <div 
                 key={comp} 
                 onClick={() => setActiveNav(comp)}
@@ -211,7 +241,7 @@ export default function AIWorkspace() {
           <BrandVoicePanel />
         ) : activeNav === 'Products & Services' ? (
           <ProductsPanel />
-        ) : activeNav === 'Competitors' || ['HubSpot', 'Zoho', 'Freshworks', 'Hootsuite'].includes(activeNav) ? (
+        ) : activeNav === 'Competitors' || competitorsList.includes(activeNav) ? (
           <CompetitorsPanel />
         ) : activeNav !== 'Analytics' ? (
           <div className="flex-1 flex flex-col h-full bg-[#1C1A1A] p-8 overflow-y-auto custom-scrollbar">
@@ -225,84 +255,7 @@ export default function AIWorkspace() {
                </p>
              </div>
              
-             {activeNav === 'Audience' && (
-               <div className="space-y-6">
-                 <div className="bg-[#242222] border border-[#373333] rounded-xl p-5">
-                   <h3 className="text-sm font-bold text-[#F5F3F1] mb-4">Target Personas</h3>
-                   <div className="space-y-4">
-                     <div className="flex justify-between items-start border-b border-[#373333] pb-4">
-                       <div>
-                         <h4 className="text-[13px] font-bold text-white mb-1">Growth Marketing Managers</h4>
-                         <p className="text-[12px] text-[#A9A4A0]">B2B Tech · $10M-$50M ARR · US/UK</p>
-                         <p className="text-[12px] text-[#A9A4A0] mt-2 max-w-lg">Pain points: Disconnected tools, low ROI on content, slow execution times.</p>
-                       </div>
-                       <button className="text-[11px] font-semibold text-[#8F0028] bg-[#8F0028]/10 px-2 py-1 rounded">Edit</button>
-                     </div>
-                     <div className="flex justify-between items-start">
-                       <div>
-                         <h4 className="text-[13px] font-bold text-white mb-1">Founders / CEOs</h4>
-                         <p className="text-[12px] text-[#A9A4A0]">Startups · Pre-Seed/Seed · Global</p>
-                         <p className="text-[12px] text-[#A9A4A0] mt-2 max-w-lg">Pain points: Need rapid growth but lack resources for a full marketing team.</p>
-                       </div>
-                       <button className="text-[11px] font-semibold text-[#8F0028] bg-[#8F0028]/10 px-2 py-1 rounded">Edit</button>
-                     </div>
-                   </div>
-                   <button className="mt-4 text-[12px] font-semibold text-[#F5F3F1] border border-[#373333] px-3 py-1.5 rounded flex items-center gap-2 hover:bg-[#373333] transition-colors"><Plus className="w-3.5 h-3.5" /> Add Persona</button>
-                 </div>
-               </div>
-             )}
-
-             {activeNav === 'Brand Voice' && (
-               <div className="space-y-6">
-                 <div className="bg-[#242222] border border-[#373333] rounded-xl p-5">
-                   <h3 className="text-sm font-bold text-[#F5F3F1] mb-4">Tone & Persona Guidelines</h3>
-                   <div className="grid grid-cols-2 gap-6">
-                     <div>
-                       <label className="text-[11px] font-bold text-[#A9A4A0] uppercase mb-1 block">Archetype</label>
-                       <div className="bg-[#1C1A1A] border border-[#373333] p-2.5 rounded text-[13px] text-white">The Visionary Strategist</div>
-                     </div>
-                     <div>
-                       <label className="text-[11px] font-bold text-[#A9A4A0] uppercase mb-1 block">Formality</label>
-                       <div className="bg-[#1C1A1A] border border-[#373333] p-2.5 rounded text-[13px] text-white">Professional but approachable</div>
-                     </div>
-                     <div className="col-span-2">
-                       <label className="text-[11px] font-bold text-[#A9A4A0] uppercase mb-1 block">Key Traits</label>
-                       <div className="flex gap-2">
-                         <span className="bg-[#8F0028]/20 text-[#FF7A85] px-2.5 py-1 rounded text-[12px] font-medium border border-[#8F0028]/30">Authoritative</span>
-                         <span className="bg-[#8F0028]/20 text-[#FF7A85] px-2.5 py-1 rounded text-[12px] font-medium border border-[#8F0028]/30">Concise</span>
-                         <span className="bg-[#8F0028]/20 text-[#FF7A85] px-2.5 py-1 rounded text-[12px] font-medium border border-[#8F0028]/30">Action-oriented</span>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             )}
-
-             {activeNav === 'Products & Services' && (
-               <div className="space-y-6">
-                 <div className="bg-[#242222] border border-[#373333] rounded-xl p-5">
-                   <h3 className="text-sm font-bold text-[#F5F3F1] mb-4">Core Offerings</h3>
-                   <div className="space-y-3">
-                     <div className="bg-[#1C1A1A] border border-[#373333] p-4 rounded-lg flex items-center justify-between">
-                       <div>
-                         <h4 className="text-[13px] font-bold text-white">AI CMO Subscription (Pro)</h4>
-                         <p className="text-[12px] text-[#A9A4A0] mt-1">$499/mo · Full access to AI agents, 100K words/mo.</p>
-                       </div>
-                       <div className="text-[#00A650] text-[11px] font-bold bg-[#00A650]/10 px-2 py-1 rounded">Primary</div>
-                     </div>
-                     <div className="bg-[#1C1A1A] border border-[#373333] p-4 rounded-lg flex items-center justify-between">
-                       <div>
-                         <h4 className="text-[13px] font-bold text-white">Enterprise Implementation</h4>
-                         <p className="text-[12px] text-[#A9A4A0] mt-1">Custom quoting · Custom workflows, dedicated account manager.</p>
-                       </div>
-                       <div className="text-[#A9A4A0] text-[11px] font-bold bg-[#373333] px-2 py-1 rounded">Secondary</div>
-                     </div>
-                   </div>
-                   <button className="mt-4 text-[12px] font-semibold text-[#F5F3F1] border border-[#373333] px-3 py-1.5 rounded flex items-center gap-2 hover:bg-[#373333] transition-colors"><Plus className="w-3.5 h-3.5" /> Add Product</button>
-                 </div>
-               </div>
-             )}
-
+             {/* Documents/Strategy Files Fallback */}
              {(['Product Information', 'Marketing Strategy', 'Brand Voice Guide'].includes(activeNav)) && (
                <div className="bg-[#242222] border border-[#373333] rounded-xl overflow-hidden flex flex-col min-h-[400px]">
                  <div className="px-5 py-3 border-b border-[#373333] flex items-center justify-between bg-[#1C1A1A]">
@@ -379,6 +332,13 @@ export default function AIWorkspace() {
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-10">
           
           {analyticsTab === 'SEO' && (
+            isApi ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                 <BarChart2 className="w-12 h-12 text-[#A9A4A0] mb-4" />
+                 <p className="text-[#F5F3F1] font-bold text-lg">NO_DATA</p>
+                 <p className="text-[#A9A4A0] text-[13px] mt-1">Analytics integration is not configured.</p>
+              </div>
+            ) : (
             <>
               {/* Connect Google Services */}
               <div className="space-y-3">
@@ -391,7 +351,6 @@ export default function AIWorkspace() {
                   <div className="bg-[#242222] border border-[#373333] rounded-xl p-5 hover:border-[#4A4545] transition-colors">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-8 h-8 rounded bg-orange-500/10 flex items-center justify-center shrink-0">
-                         {/* GA Icon placeholder */}
                          <BarChart2 className="w-4 h-4 text-orange-500" />
                       </div>
                       <div>
@@ -413,7 +372,6 @@ export default function AIWorkspace() {
                   <div className="bg-[#242222] border border-[#373333] rounded-xl p-5 hover:border-[#4A4545] transition-colors">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center shrink-0">
-                         {/* GSC Icon placeholder */}
                          <Search className="w-4 h-4 text-blue-500" />
                       </div>
                       <div>
@@ -447,7 +405,6 @@ export default function AIWorkspace() {
                   <div className="bg-[#242222] border border-[#373333] rounded-xl p-5">
                     <h4 className="text-[11px] font-bold text-[#F5F3F1] uppercase tracking-wider mb-5">Mobile</h4>
                     <div className="flex justify-between px-1">
-                       {/* Circular Score Dummies */}
                        {[{score: 56, label: 'Performance', color: '#F59E0B'}, {score: 85, label: 'Accessibility', color: '#F59E0B'}, {score: 100, label: 'Best Practices', color: '#00A650'}, {score: 91, label: 'SEO', color: '#00A650'}].map(s => (
                          <div key={s.label} className="flex flex-col items-center gap-2 flex-1 px-1">
                            <div className="w-12 h-12 rounded-full border-[3px] flex items-center justify-center shrink-0" style={{ borderColor: s.color }}>
@@ -566,6 +523,7 @@ export default function AIWorkspace() {
 
               </div>
             </>
+            )
           )}
 
           {analyticsTab !== 'SEO' && (
@@ -601,71 +559,116 @@ export default function AIWorkspace() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-          
-          {/* Needs Attention */}
-          <div className="space-y-3">
-             <div className="flex items-center justify-between">
-               <h3 className="text-[13px] font-bold text-[#F5F3F1]">Needs Your Attention</h3>
-               <div className="px-1.5 py-0.5 rounded-full bg-[#8F0028] text-white text-[10px] font-bold">3</div>
-             </div>
-             
-             {/* Alert Card */}
-             <div className="bg-[#2A151B] border border-[#8F0028] rounded-xl p-4">
-               <div className="flex items-start gap-3">
-                 <div className="w-8 h-8 rounded bg-[#8F0028]/20 flex items-center justify-center shrink-0">
-                   <AlertCircle className="w-4 h-4 text-[#FF4560]" />
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+            <>
+              {/* Needs Attention */}
+              <div className="space-y-3">
+                 <div className="flex items-center justify-between">
+                   <h3 className="text-[13px] font-bold text-[#F5F3F1]">Needs Your Attention</h3>
+                   <div className="px-1.5 py-0.5 rounded-full bg-[#8F0028] text-white text-[10px] font-bold">3</div>
                  </div>
-                 <div className="flex-1 min-w-0">
-                   <div className="flex items-center justify-between mb-1">
-                     <h4 className="text-[13px] font-bold text-[#F5F3F1]">Content Agent</h4>
-                     <span className="text-[10px] text-[#A9A4A0]">2h ago</span>
-                   </div>
-                   <p className="text-[12px] text-[#F5F3F1] font-medium leading-snug mb-3">3 posts ready for your review</p>
-                   
-                   <div className="flex gap-2">
-                     <button className="flex-1 py-1.5 bg-transparent border border-[#8F0028] text-[#FF4560] text-[11px] font-bold rounded hover:bg-[#8F0028]/10 transition-colors">Review</button>
-                     <button className="flex-1 py-1.5 bg-[#8F0028] hover:bg-[#A3002D] text-white text-[11px] font-bold rounded transition-colors shadow-lg shadow-[#8F0028]/20">Approve All</button>
-                   </div>
-                 </div>
-               </div>
-             </div>
-          </div>
-
-          {/* All Agents */}
-          <div className="space-y-3">
-             <h3 className="text-[13px] font-bold text-[#F5F3F1]">All Agents</h3>
-             
-             <div className="space-y-2">
-               {[
-                 { name: 'SEO Agent', icon: Globe, status: '2 recommendations ready', time: '12m ago', color: 'text-blue-400' },
-                 { name: 'GEO Agent', icon: Target, status: '2 citation gaps detected', time: '18m ago', color: 'text-emerald-400' },
-                 { name: 'Competitor Agent', icon: Zap, status: 'Detected new competitor positioning', time: '26m ago', color: 'text-red-400' },
-                 { name: 'Content Agent', icon: FileText, status: '3 drafts ready for review', time: '1h ago', color: 'text-pink-400' },
-                 { name: 'LinkedIn Agent', icon: LinkIcon, status: 'Set up your brand voice to get started', time: '2h ago', color: 'text-blue-500' },
-                 { name: 'X Agent', icon: MessageSquare, status: '2 ideas ready', time: '3h ago', color: 'text-white' },
-                 { name: 'Reddit Agent', icon: Search, status: '2 opportunities ready', time: '3h ago', color: 'text-orange-500' },
-                 { name: 'Articles Agent', icon: FileText, status: '1 topic ready', time: '4h ago', color: 'text-purple-400' },
-                 { name: 'UGC Videos Agent', icon: CheckCircle2, status: '1 draft ready', time: '4h ago', color: 'text-orange-400' },
-               ].map((agent, i) => (
-                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#242222] transition-colors border border-transparent hover:border-[#373333] cursor-pointer group">
-                   <div className="w-8 h-8 rounded-full bg-[#242222] border border-[#373333] flex items-center justify-center shrink-0 group-hover:bg-[#1C1A1A]">
-                     <agent.icon className={`w-4 h-4 ${agent.color}`} />
-                   </div>
-                   <div className="flex-1 min-w-0">
-                     <div className="flex items-center justify-between">
-                       <h4 className="text-[13px] font-bold text-[#F5F3F1]">{agent.name}</h4>
-                       <span className="text-[10px] text-[#A9A4A0]">{agent.time}</span>
+                 
+                 {/* Alert Card */}
+                 <div className="bg-[#2A151B] border border-[#8F0028] rounded-xl p-4">
+                   <div className="flex items-start gap-3">
+                     <div className="w-8 h-8 rounded bg-[#8F0028]/20 flex items-center justify-center shrink-0">
+                       <AlertCircle className="w-4 h-4 text-[#FF4560]" />
                      </div>
-                     <p className="text-[11px] text-[#A9A4A0] truncate font-medium mt-0.5">{agent.status}</p>
-                   </div>
-                   <div className="hidden group-hover:flex items-center gap-1 shrink-0 bg-[#1C1A1A] border border-[#373333] rounded px-1.5 py-0.5 text-[9px] font-bold text-[#F5F3F1]">
-                     Upgrade <ChevronDown className="w-3 h-3" />
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center justify-between mb-1">
+                         <h4 className="text-[13px] font-bold text-[#F5F3F1]">Content Agent</h4>
+                         <span className="text-[10px] text-[#A9A4A0]">2h ago</span>
+                       </div>
+                       <p className="text-[12px] text-[#F5F3F1] font-medium leading-snug mb-3">3 posts ready for your review</p>
+                       
+                       <div className="flex gap-2">
+                         <button className="flex-1 py-1.5 bg-transparent border border-[#8F0028] text-[#FF4560] text-[11px] font-bold rounded hover:bg-[#8F0028]/10 transition-colors">Review</button>
+                         <button className="flex-1 py-1.5 bg-[#8F0028] hover:bg-[#A3002D] text-white text-[11px] font-bold rounded transition-colors shadow-lg shadow-[#8F0028]/20">Approve All</button>
+                       </div>
+                     </div>
                    </div>
                  </div>
-               ))}
-             </div>
-          </div>
+              </div>
+
+              {/* All Agents */}
+              <div className="space-y-3">
+                 <h3 className="text-[13px] font-bold text-[#F5F3F1]">All Agents</h3>
+                 
+                 <div className="space-y-2">
+                   {(agentsList.length > 0 ? agentsList : [
+                     { name: 'SEO Agent', id: 'seo', icon: Globe, status: '2 recommendations ready', time: '12m ago', color: 'text-blue-400' },
+                     { name: 'GEO Agent', id: 'geo', icon: Target, status: '2 citation gaps detected', time: '18m ago', color: 'text-emerald-400' },
+                     { name: 'Competitor Agent', id: 'competitor', icon: Zap, status: 'Detected new competitor positioning', time: '26m ago', color: 'text-red-400' },
+                     { name: 'Content Agent', id: 'writer', icon: FileText, status: '3 drafts ready for review', time: '1h ago', color: 'text-pink-400' },
+                     { name: 'LinkedIn Agent', id: 'linkedin', icon: LinkIcon, status: 'Set up your brand voice to get started', time: '2h ago', color: 'text-blue-500' },
+                     { name: 'X Agent', id: 'x', icon: MessageSquare, status: '2 ideas ready', time: '3h ago', color: 'text-white' },
+                     { name: 'Reddit Agent', id: 'reddit', icon: Search, status: '2 opportunities ready', time: '3h ago', color: 'text-orange-500' },
+                     { name: 'Articles Agent', id: 'content_strategy', icon: FileText, status: '1 topic ready', time: '4h ago', color: 'text-purple-400' },
+                     { name: 'UGC Videos Agent', id: 'designer', icon: CheckCircle2, status: '1 draft ready', time: '4h ago', color: 'text-orange-400' },
+                   ]).map((agent: any, i) => {
+                     // For dynamic agents, calculate status and time from agentRuns
+                     const agentId = agent.id || agent.agent_id;
+                     const latestRun = agentRuns.find((r: any) => r.agent_id === agentId);
+                     
+                     // Get icon based on name/id if not present
+                     let Icon = agent.icon || Bot;
+                     if (!agent.icon) {
+                       if (agentId === 'seo') Icon = Globe;
+                       else if (agentId === 'geo') Icon = Target;
+                       else if (agentId === 'competitor' || agentId === 'performance') Icon = Zap;
+                       else if (agentId === 'writer' || agentId === 'content_strategy') Icon = FileText;
+                       else if (agentId === 'linkedin') Icon = LinkIcon;
+                       else if (agentId === 'x') Icon = MessageSquare;
+                       else if (agentId === 'reddit') Icon = Search;
+                       else if (agentId === 'designer') Icon = CheckCircle2;
+                     }
+                     
+                     // Determine display status
+                     let displayStatus = agent.status;
+                     let displayTime = agent.time;
+                     let color = agent.color || 'text-[#A9A4A0]';
+                     
+                     if (latestRun) {
+                       if (latestRun.status === 'SUCCESS' || latestRun.status === 'COMPLETED') {
+                          displayStatus = 'Run completed successfully';
+                          color = 'text-emerald-400';
+                       } else if (latestRun.status === 'FAILED' || latestRun.status === 'error') {
+                          displayStatus = 'Failed to execute';
+                          color = 'text-red-400';
+                       } else if (latestRun.status === 'NOT_CONFIGURED') {
+                          displayStatus = 'Not configured (e.g. missing API keys)';
+                          color = 'text-orange-400';
+                       } else {
+                          displayStatus = `Status: ${latestRun.status}`;
+                          color = 'text-blue-400';
+                       }
+                       displayTime = new Date(latestRun.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                     } else if (agentsList.length > 0) {
+                       displayStatus = 'Idle / Ready to run';
+                       displayTime = '--';
+                     }
+                     
+                     return (
+                     <div key={agentId || i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#242222] transition-colors border border-transparent hover:border-[#373333] cursor-pointer group">
+                       <div className="w-8 h-8 rounded-full bg-[#242222] border border-[#373333] flex items-center justify-center shrink-0 group-hover:bg-[#1C1A1A]">
+                         <Icon className={`w-4 h-4 ${color}`} />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between">
+                           <h4 className="text-[13px] font-bold text-[#F5F3F1]">{agent.name}</h4>
+                           <span className="text-[10px] text-[#A9A4A0]">{displayTime}</span>
+                         </div>
+                         <p className="text-[11px] text-[#A9A4A0] truncate font-medium mt-0.5">{displayStatus}</p>
+                       </div>
+                       <div className="hidden group-hover:flex items-center gap-1 shrink-0 bg-[#1C1A1A] border border-[#373333] rounded px-1.5 py-0.5 text-[9px] font-bold text-[#F5F3F1]">
+                         Upgrade <ChevronDown className="w-3 h-3" />
+                       </div>
+                     </div>
+                     )
+                   })}
+                 </div>
+              </div>
+            </>
         </div>
       </div>
 

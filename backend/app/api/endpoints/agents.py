@@ -5,7 +5,7 @@ from app.models.all_models import Brand, User, AgentTask, AgentRun
 from app.db.session import SessionLocal
 from pydantic import BaseModel
 from app.agents.registry import agent_registry
-from app.worker import execute_agent_task
+from app.worker import execute_generic_agent
 import uuid
 
 router = APIRouter()
@@ -61,15 +61,14 @@ def run_agent(
         run = AgentRun(
             workspace_id=brand.workspace_id,
             brand_id=brand.id,
-            agent_type=agent.agent_id,
-            task_id=task.id,
-            input_data=req.input_data
+            agent_id=agent.agent_id,
+            input_context=req.input_data
         )
         db.add(run)
         db.commit()
         db.refresh(run)
         
-        execute_agent_task.delay(str(task.id), str(run.id))
+        execute_generic_agent.delay(str(run.id))
         
         return {"task_id": str(task.id), "run_id": str(run.id)}
     finally:

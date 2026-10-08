@@ -17,6 +17,18 @@ class ContentStrategyAgent(BaseAgent):
             description="Transforms growth opportunities into structured content briefs.",
             capabilities=["content_brief_generation"]
         )
+        from app.agents.definition import AgentDefinition
+        self.definition = AgentDefinition(
+            id=self.agent_id,
+            name=self.name,
+            description=self.description,
+            category="CONTENT",
+            capabilities=self.capabilities,
+            required_integrations=[],
+            input_schema={"type": "object", "properties": {"opportunity_id": {"type": "string"}}},
+            output_schema={"type": "object"},
+            approval_policy="NEVER_REQUIRE"
+        )
 
     def execute(self, context: AgentContext) -> AgentResult:
         db = SessionLocal()
@@ -35,29 +47,33 @@ class ContentStrategyAgent(BaseAgent):
 
             analytics_run = db.query(AgentRun).filter(
                 AgentRun.brand_id == context.brand_id, 
-                AgentRun.agent_type == "analytics",
+                AgentRun.agent_id == "analytics",
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
             
             competitor_run = db.query(AgentRun).filter(
                 AgentRun.brand_id == context.brand_id, 
-                AgentRun.agent_type == "competitor",
+                AgentRun.agent_id == "competitor",
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
 
             growth_run = db.query(AgentRun).filter(
                 AgentRun.brand_id == context.brand_id,
-                AgentRun.agent_type == "growth",
+                AgentRun.agent_id == "growth",
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
 
-            analytics_data = analytics_run.output_data if analytics_run else "No recent analytics."
-            competitor_data = competitor_run.output_data if competitor_run else "No recent competitor data."
-            growth_data = growth_run.output_data if growth_run else "No recent growth data."
+            analytics_data = analytics_run.output if analytics_run else "No recent analytics."
+            competitor_data = competitor_run.output if competitor_run else "No recent competitor data."
+            growth_data = growth_run.output if growth_run else "No recent growth data."
 
-            sys_prompt = f"""You are the Content Strategy Agent for {context.brand_context.brand.name if context.brand_context else 'a brand'}.
+            strategy_context = ""
+            if "strategy" in context.brand_context:
+                strategy_context = json.dumps(context.brand_context["strategy"], indent=2)
+
+            sys_prompt = f"""You are the Content Strategy Agent for {context.brand_context.get('business_overview', {}).get('name', 'a brand')}.
 Your job is to take a Growth Opportunity and turn it into a structured Content Brief.
-Use the provided Brand Context, Analytics, Competitor Insights, and Growth Opportunities to ground your strategy.
+Use the provided Brand Context, Analytics, Competitor Insights, Growth Opportunities, and Strategy Documents to ground your strategy.
 Do NOT invent fake marketing evidence. Use what is provided.
 Output a structured JSON object containing:
 - "title": A proposed title for the content.
@@ -80,6 +96,9 @@ Opportunity to address:
 Title: {opportunity.title}
 Description: {opportunity.description}
 Impact: {opportunity.impact}
+
+Strategy Documents:
+{strategy_context}
 
 Analytics Context:
 {json.dumps(analytics_data, indent=2)}

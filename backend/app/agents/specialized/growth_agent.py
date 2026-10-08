@@ -24,13 +24,13 @@ class GrowthAgent(BaseAgent):
             # 1. Fetch latest Analytics and Competitor results
             analytics_run = db.query(AgentRun).filter(
                 AgentRun.brand_id == context.brand_id, 
-                AgentRun.agent_type == "analytics",
+                AgentRun.agent_id == "analytics",
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
             
             competitor_run = db.query(AgentRun).filter(
                 AgentRun.brand_id == context.brand_id, 
-                AgentRun.agent_type == "competitor",
+                AgentRun.agent_id == "competitor",
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
             
@@ -40,8 +40,8 @@ class GrowthAgent(BaseAgent):
                 Opportunity.status.notin_(["DISMISSED", "COMPLETED"])
             ).all()
 
-            analytics_data = analytics_run.output_data if analytics_run else "No recent analytics."
-            competitor_data = competitor_run.output_data if competitor_run else "No recent competitor data."
+            analytics_data = analytics_run.output if analytics_run else "No recent analytics."
+            competitor_data = competitor_run.output if competitor_run else "No recent competitor data."
             existing_opps_data = [{"title": o.title, "status": o.status} for o in existing_opps]
 
             sys_prompt = f"""You are the Growth Agent for {context.brand_context.brand.name if context.brand_context else 'a brand'}.

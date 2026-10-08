@@ -16,6 +16,14 @@ export default function Onboarding() {
   const [businessName, setBusinessName] = useState("")
   const [website, setWebsite] = useState("")
   const [description, setDescription] = useState("")
+  const [valueProposition, setValueProposition] = useState("")
+  const [brandVoice, setBrandVoice] = useState<string[]>(['Professional'])
+  const [targetDemographic, setTargetDemographic] = useState("")
+  const [customerPainPoints, setCustomerPainPoints] = useState("")
+  const [primaryObjective, setPrimaryObjective] = useState("Increase Brand Awareness")
+  const [targetRevenue, setTargetRevenue] = useState("")
+  const [competitors, setCompetitors] = useState(["", "", ""])
+
   const [loading, setLoading] = useState(false)
 
   const handleNext = async () => {
@@ -25,25 +33,52 @@ export default function Onboarding() {
          return
       }
       setStepIdx(stepIdx + 1)
-    } else {
+      } else {
       setLoading(true)
       try {
+        localStorage.setItem('onboardingData', JSON.stringify({
+          businessName,
+          website,
+          description,
+          valueProposition,
+          brandVoice,
+          targetDemographic,
+          customerPainPoints,
+          primaryObjective,
+          targetRevenue,
+          competitors: competitors.filter(c => c.trim() !== "")
+        }))
+        
         const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
         if (isApi) {
           const { ApiClient } = await import('@/lib/api/client')
           // Create Workspace
           const ws = await ApiClient.post<any>('/api/workspaces/', { name: businessName })
           // Create Brand
-          await ApiClient.post('/api/brands/', {
+          const br = await ApiClient.post<any>('/api/brands/', {
             name: businessName,
             workspace_id: ws.id,
             website_url: website,
             description: description
           }, { headers: { 'X-Workspace-ID': ws.id } })
           await checkAuth() // To fetch workspace info
+
+          // Submit the rest of the onboarding data to configure the brand
+          await ApiClient.post('/api/onboarding/complete', {
+            businessName,
+            website,
+            description,
+            valueProposition,
+            brandVoice,
+            targetDemographic,
+            customerPainPoints,
+            primaryObjective,
+            targetRevenue,
+            competitors: competitors.filter(c => c.trim() !== "")
+          }, { headers: { 'X-Workspace-ID': ws.id, 'X-Brand-ID': br.id } })
         }
         setAuthState('onboardingComplete')
-        router.push('/app/command-center')
+        router.push('/app')
       } catch (e) {
         alert("Failed to complete setup")
       }
@@ -134,7 +169,7 @@ export default function Onboarding() {
                 {stepIdx === 3 && "Set your primary objectives. The AI will optimize all campaigns and content to drive towards these specific results."}
                 {stepIdx === 4 && "Identify key players in your market. We'll analyze their strategies to find gaps and opportunities for your brand to stand out."}
                 {stepIdx === 5 && "We are provisioning dedicated virtual agents that will execute your marketing loops autonomously."}
-                {stepIdx === 6 && "Your autonomous marketing engine is primed. Access the command center to watch it work."}
+                {stepIdx === 6 && "Your autonomous marketing engine is primed. Access the dashboard to watch it work."}
               </p>
               
               {stepIdx === 1 && (
@@ -381,6 +416,8 @@ export default function Onboarding() {
                         </div>
                         <Input 
                           placeholder="What makes you unique?" 
+                          value={valueProposition}
+                          onChange={e => setValueProposition(e.target.value)}
                           className="h-11 pl-10 bg-white border-[#E8E4DC] focus-visible:ring-[#800020] text-sm font-medium placeholder:text-[#858585] rounded-xl shadow-sm"
                         />
                       </div>
@@ -392,7 +429,18 @@ export default function Onboarding() {
                       <div className="flex flex-wrap gap-2">
                         {["Professional", "Friendly", "Bold", "Technical", "Premium", "Playful", "Minimal", "Authoritative"].map(v => (
                           <label key={v} className="cursor-pointer">
-                            <input type="checkbox" className="peer sr-only" defaultChecked={v === 'Professional'} />
+                            <input 
+                              type="checkbox" 
+                              className="peer sr-only" 
+                              checked={brandVoice.includes(v)} 
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setBrandVoice([...brandVoice, v])
+                                } else {
+                                  setBrandVoice(brandVoice.filter(x => x !== v))
+                                }
+                              }}
+                            />
                             <div className="px-4 py-2 bg-white border border-[#E8E4DC] rounded-full text-xs font-medium text-[#111111] peer-checked:bg-[#800020]/10 peer-checked:text-[#800020] peer-checked:border-[#800020] hover:border-[#800020]/50 transition-colors shadow-sm">
                               {v}
                             </div>
@@ -415,6 +463,8 @@ export default function Onboarding() {
                       <label className="block text-[11px] font-bold text-[#111111] mb-1.5 uppercase tracking-wider">Target Demographic <span className="text-red-500">*</span></label>
                       <Input 
                         placeholder="e.g. B2B SaaS Founders, 25-45" 
+                        value={targetDemographic}
+                        onChange={e => setTargetDemographic(e.target.value)}
                         className="h-11 px-4 bg-white border-[#E8E4DC] focus-visible:ring-[#800020] text-sm font-medium placeholder:text-[#858585] rounded-xl shadow-sm"
                       />
                     </div>
@@ -423,6 +473,8 @@ export default function Onboarding() {
                       <textarea 
                         className="w-full rounded-xl bg-white border border-[#E8E4DC] px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#800020] placeholder:text-[#858585] transition-all resize-none shadow-sm" 
                         rows={3}
+                        value={customerPainPoints}
+                        onChange={e => setCustomerPainPoints(e.target.value)}
                         placeholder="What problems are they trying to solve?"
                       ></textarea>
                     </div>
@@ -440,7 +492,11 @@ export default function Onboarding() {
                     <div>
                       <label className="block text-[11px] font-bold text-[#111111] mb-1.5 uppercase tracking-wider">Primary Objective <span className="text-red-500">*</span></label>
                       <div className="relative">
-                        <select className="w-full h-11 px-4 bg-white border border-[#E8E4DC] focus:outline-none focus:ring-2 focus:ring-[#800020] text-sm font-medium rounded-xl shadow-sm appearance-none">
+                        <select 
+                          value={primaryObjective}
+                          onChange={e => setPrimaryObjective(e.target.value)}
+                          className="w-full h-11 px-4 bg-white border border-[#E8E4DC] focus:outline-none focus:ring-2 focus:ring-[#800020] text-sm font-medium rounded-xl shadow-sm appearance-none"
+                        >
                            <option>Increase Brand Awareness</option>
                            <option>Generate Qualified Leads</option>
                            <option>Boost Sales/Revenue</option>
@@ -457,6 +513,8 @@ export default function Onboarding() {
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#111111] font-bold">$</div>
                         <Input 
                           placeholder="10,000" 
+                          value={targetRevenue}
+                          onChange={e => setTargetRevenue(e.target.value)}
                           className="h-11 pl-8 bg-white border-[#E8E4DC] focus-visible:ring-[#800020] text-sm font-medium placeholder:text-[#858585] rounded-xl shadow-sm"
                         />
                       </div>
@@ -472,11 +530,17 @@ export default function Onboarding() {
                   <p className="text-[#5A5A5A] font-medium text-[15px] mb-8">Tell us who you're up against so we can find gaps in their strategy.</p>
                   
                   <div className="space-y-4">
-                    {[1, 2, 3].map(num => (
+                    {[1, 2, 3].map((num, idx) => (
                       <div key={num}>
                         <label className="block text-[11px] font-bold text-[#111111] mb-1.5 uppercase tracking-wider">Competitor {num} {num === 1 && <span className="text-red-500">*</span>}</label>
                         <Input 
                           placeholder={`Competitor ${num} URL or Name`} 
+                          value={competitors[idx]}
+                          onChange={e => {
+                            const newComps = [...competitors];
+                            newComps[idx] = e.target.value;
+                            setCompetitors(newComps);
+                          }}
                           className="h-11 px-4 bg-white border-[#E8E4DC] focus-visible:ring-[#800020] text-sm font-medium placeholder:text-[#858585] rounded-xl shadow-sm"
                         />
                       </div>
@@ -544,7 +608,7 @@ export default function Onboarding() {
       >
         {loading ? "Processing..." : (
           <>
-             {stepIdx === steps.length - 1 ? 'Enter Command Center' : 'Continue'}
+             {stepIdx === steps.length - 1 ? 'Enter Dashboard' : 'Continue'}
              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
           </>
         )}

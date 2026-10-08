@@ -15,7 +15,7 @@ export class ApiAgentProvider implements AgentProvider {
   async getAgentRun(runId: string): Promise<any> {
     return agentsApi.getAgentRun(runId);
   }
-  async getAgentRuns(agentId: string): Promise<any[]> {
+  async getAgentRuns(agentId?: string): Promise<any[]> {
     return agentsApi.getAgentRuns(agentId);
   }
 }

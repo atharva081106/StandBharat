@@ -1,10 +1,11 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, workspaces, brands, agents, integrations, opportunities, dashboard, ai, brand_brain, agent_runs, orchestrator, content, approvals, publishing, performance, website_analysis, notifications, search, campaigns
+from app.api.endpoints import auth, workspaces, brands, agents, integrations, opportunities, dashboard, ai, brand_brain, agent_runs, orchestrator, content, approvals, publishing, performance, website_analysis, notifications, search, campaigns, onboarding
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(workspaces.router, prefix="/workspaces", tags=["workspaces"])
 api_router.include_router(brands.router, prefix="/brands", tags=["brands"])
+api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(website_analysis.router, prefix="/brands", tags=["website-analysis"])
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(integrations.router, prefix="/integrations", tags=["integrations"])

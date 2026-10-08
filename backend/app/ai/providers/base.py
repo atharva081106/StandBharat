@@ -11,6 +11,7 @@ class BaseAIProvider(ABC):
         model: str,
         temperature: float = 0.7,
         max_tokens: int = 1000,
+        tools: Optional[List[Dict[str, Any]]] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> AIResponse:
         pass
