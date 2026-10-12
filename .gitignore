@@ -21,7 +21,6 @@ venv/
 env/
 .env/
 .pytest_cache/
-alembic.ini
 
 # Database
 *.db
