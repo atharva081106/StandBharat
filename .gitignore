@@ -27,7 +27,11 @@ alembic.ini
 *.db
 *.sqlite3
 *.sqlite
-database dumps containing secrets
+*.dump
+*.dump.enc
+*.sql
+*.sql.gz
+*rollback_snapshot*.json
 
 # IDE
 .vscode/
