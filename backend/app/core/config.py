@@ -49,6 +49,24 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY_ID: Optional[str] = None
     S3_SECRET_ACCESS_KEY: Optional[str] = None
 
+    # Automated PostgreSQL Backup & Cold Storage Configuration
+    BACKUP_ENABLED: bool = True
+    BACKUP_SCHEDULE_CRON: str = "0 2 * * *"
+    BACKUP_LOCAL_DIR: str = "storage/backups/postgresql"
+    BACKUP_STORAGE_BACKEND: str = "local" # "local" or "s3"
+    BACKUP_S3_BUCKET: Optional[str] = None
+    BACKUP_S3_PREFIX: str = "backups/postgresql"
+    BACKUP_RETENTION_COUNT: int = 7
+    BACKUP_RETENTION_DAYS: int = 30
+    BACKUP_ENCRYPTION_KEY: Optional[str] = None
+    BACKUP_ENCRYPTION_ENABLED: bool = False
+    PG_DUMP_PATH: Optional[str] = None
+    PG_RESTORE_PATH: Optional[str] = None
+
+    # Database Credential Encryption Key (Phase 38B)
+    DB_ENCRYPTION_KEY: Optional[str] = None
+    DB_ENCRYPTION_FALLBACK_TO_SECRET_KEY: bool = True
+
     # Publishing & Stale Recovery
     STALE_PUBLICATION_TIMEOUT_MINUTES: int = 60
 
@@ -82,6 +100,18 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "CRITICAL SECURITY DEFECT: In production with credentials enabled, CORS_ORIGINS must not contain wildcard '*'."
                 )
+        if self.BACKUP_ENCRYPTION_KEY and not self.BACKUP_ENCRYPTION_ENABLED:
+            self.BACKUP_ENCRYPTION_ENABLED = True
+        if self.BACKUP_STORAGE_BACKEND.lower() == "s3" and not self.BACKUP_S3_BUCKET:
+            self.BACKUP_S3_BUCKET = self.S3_BUCKET_NAME
+        if self.DB_ENCRYPTION_KEY and len(self.DB_ENCRYPTION_KEY.strip()) < 16:
+            raise ValueError(
+                "DB_ENCRYPTION_KEY must be at least 16 characters (recommended 32+ characters or a 44-character Fernet key)."
+            )
+        if self.ENVIRONMENT.lower() == "production" and not self.DB_ENCRYPTION_FALLBACK_TO_SECRET_KEY and not self.DB_ENCRYPTION_KEY:
+            raise ValueError(
+                "CRITICAL SECURITY DEFECT: In production with fallback disabled, DB_ENCRYPTION_KEY must be explicitly configured."
+            )
         return self
 
     model_config = ConfigDict(env_file=(".env", "../.env"), extra="ignore")

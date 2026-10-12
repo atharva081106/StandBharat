@@ -6,6 +6,7 @@ from app.publishing.exceptions import PublishingError, NotConfiguredError, Authe
 from app.publishing.service import PublishingService
 from app.models.all_models import ContentDraft
 from app.core.security import sanitize_error_message
+from app.core.encryption import EncryptionError
 import datetime
 
 @celery_app.task(bind=True, max_retries=3)
@@ -105,15 +106,17 @@ def execute_publishing_task(self, publication_id_str: str):
             
             db.commit()
             
-        except (NotConfiguredError, AuthenticationError) as e:
+        except (NotConfiguredError, AuthenticationError, EncryptionError) as e:
             # Permanent failure - don't retry auth issues automatically
-            sanitized_msg = sanitize_error_message(e.message)
+            err_msg = getattr(e, "message", str(e))
+            err_code = getattr(e, "code", "AUTHENTICATION_ERROR")
+            sanitized_msg = sanitize_error_message(err_msg)
             publication.status = "FAILED"
-            publication.error_code = e.code
+            publication.error_code = err_code
             publication.error_message = sanitized_msg
             
             attempt.status = "FAILED"
-            attempt.error_code = e.code
+            attempt.error_code = err_code
             attempt.error_message = sanitized_msg
             attempt.completed_at = datetime.datetime.utcnow()
             

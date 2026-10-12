@@ -41,8 +41,10 @@ def sanitize_error_message(message: Optional[str]) -> Optional[str]:
     # Redact Authorization header / Bearer token
     msg = re.sub(r'(bearer\s+)[a-zA-Z0-9_\-\.]{10,}', r'\1[REDACTED]', msg, flags=re.IGNORECASE)
     # Redact JSON / query param fields for secrets
-    msg = re.sub(r'((?:access_token|refresh_token|client_secret|api_key|apikey|password|secret|code)["\':=\s]+)[a-zA-Z0-9_\-\.]{8,}', r'\1[REDACTED]', msg, flags=re.IGNORECASE)
+    msg = re.sub(r'((?:access_token|refresh_token|client_secret|api_key|apikey|password|pgpassword|backup_encryption_key|db_encryption_key|encryption_key|secret|code)["\':=\s]+)[a-zA-Z0-9_\-\.]{8,}', r'\1[REDACTED]', msg, flags=re.IGNORECASE)
     # Redact URL query strings for tokens
-    msg = re.sub(r'([?&](?:access_token|code|client_secret|refresh_token|token)=)[^&\s"\']+', r'\1[REDACTED]', msg, flags=re.IGNORECASE)
+    msg = re.sub(r'([?&](?:access_token|code|client_secret|refresh_token|token|pgpassword|key)=)[^&\s"\']+', r'\1[REDACTED]', msg, flags=re.IGNORECASE)
+    # Redact 44-character base64 Fernet keys
+    msg = re.sub(r'\b[A-Za-z0-9_-]{43}=\b', r'[REDACTED_ENCRYPTION_KEY]', msg)
     return msg
 

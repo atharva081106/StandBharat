@@ -15,10 +15,12 @@ class LinkedInPerformanceProvider(PerformanceProvider):
         if not connection or not connection.encrypted_credentials:
             return None
         import json
+        from app.core.encryption import decrypt
         try:
-            creds = json.loads(connection.encrypted_credentials)
+            creds_str = decrypt(connection.encrypted_credentials)
+            creds = json.loads(creds_str)
             return creds.get("access_token")
-        except:
+        except Exception:
             return None
 
     async def get_publication_metrics(self, external_post_id: str, connection: Any) -> Dict[str, Any]:

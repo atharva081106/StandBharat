@@ -1,9 +1,11 @@
 import pytest
 import uuid
+import json
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import SessionLocal
+from app.core.encryption import encrypt
 from app.models.all_models import (
     User, Workspace, Brand, WorkspaceMember, ContentProject, ContentDraft, ContentApproval
 )
@@ -452,7 +454,7 @@ def test_end_to_end_content_workflow_draft_to_published():
         brand_id=uuid.UUID(brand_id),
         platform="linkedin",
         status="CONNECTED",
-        encrypted_credentials="enc"
+        encrypted_credentials=encrypt(json.dumps({"access_token": "dummy_token"}))
     )
     db.add(conn)
     db.commit()

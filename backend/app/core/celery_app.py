@@ -13,7 +13,8 @@ celery_app.conf.update(
         "app.orchestrator.scheduler",
         "app.worker",
         "app.publishing.tasks",
-        "app.workers.celery_worker"
+        "app.workers.celery_worker",
+        "app.backup.tasks"
     ],
     # Redis Hardening & Reliability Configurations
     broker_connection_retry_on_startup=True,
@@ -51,7 +52,17 @@ celery_app.conf.beat_schedule = {
         'task': 'recover_stale_publications',
         'schedule': crontab(minute='*/30'),
     },
+    'automated-postgres-backup-daily': {
+        'task': 'app.backup.tasks.execute_scheduled_backup',
+        'schedule': crontab(hour='2', minute='0'),
+    },
 }
 
 # Auto-discover tasks in our modules
-celery_app.autodiscover_tasks(["app.orchestrator.scheduler", "app.worker", "app.publishing", "app.workers.celery_worker"])
+celery_app.autodiscover_tasks([
+    "app.orchestrator.scheduler",
+    "app.worker",
+    "app.publishing",
+    "app.workers.celery_worker",
+    "app.backup"
+])

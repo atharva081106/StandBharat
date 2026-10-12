@@ -14,6 +14,9 @@ from app.core.encryption import decrypt
 from app.core.config import settings
 from app.core.security import sanitize_error_message
 from typing import Dict, Any, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PublishingService:
     def __init__(self, db: Session):
@@ -53,8 +56,9 @@ class PublishingService:
             return {}
         try:
             return json.loads(decrypt(encrypted))
-        except Exception:
-            return {}
+        except Exception as e:
+            logger.error("Failed to decrypt credentials for connection: %s", type(e).__name__)
+            raise
 
     def get_publication(self, publication_id: uuid.UUID, workspace_id: uuid.UUID) -> Optional[Publication]:
         return self.db.query(Publication).filter(
