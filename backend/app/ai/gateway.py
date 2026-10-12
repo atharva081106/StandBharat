@@ -3,6 +3,7 @@ from .schemas import AIRequestMessage, AIResponse
 from .exceptions import AINotConfiguredException, AIProviderException
 from .config import ai_config
 from .providers.openai import OpenAIProvider
+from .providers.mistral import MistralProvider
 
 class AIGateway:
     def __init__(self):
@@ -12,12 +13,19 @@ class AIGateway:
             self.providers["openai"] = OpenAIProvider()
         except AINotConfiguredException:
             pass
+        try:
+            self.providers["mistral"] = MistralProvider()
+        except AINotConfiguredException:
+            pass
 
     def _get_provider(self, provider_name: Optional[str] = None):
-        provider_name = provider_name or ai_config.DEFAULT_PROVIDER
-        if provider_name not in self.providers:
-            raise AINotConfiguredException(f"AI Provider '{provider_name}' is not configured.")
-        return self.providers[provider_name]
+        target = provider_name or ai_config.DEFAULT_PROVIDER
+        if target not in self.providers:
+            # Fallback: if default provider (e.g. openai) is not configured, but mistral is, use mistral
+            if (not provider_name or target == "openai") and "mistral" in self.providers:
+                return self.providers["mistral"]
+            raise AINotConfiguredException(f"AI Provider '{target}' is not configured.")
+        return self.providers[target]
 
     def generate(
         self,
@@ -31,7 +39,10 @@ class AIGateway:
     ) -> AIResponse:
         
         provider_impl = self._get_provider(provider)
-        model = model or ai_config.DEFAULT_MODEL
+        if not model:
+            model = getattr(provider_impl, "default_model", ai_config.DEFAULT_MODEL)
+        elif getattr(provider_impl, "provider_name", "") == "mistral" and model.startswith("gpt-"):
+            model = getattr(provider_impl, "default_model", "ministral-8b-latest")
         
         # Here we could implement retries and timeouts
         # For this foundation, we just pass through to the provider

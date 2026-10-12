@@ -14,6 +14,8 @@ from app.ai.context.prompt_context import build_brand_prompt_context
 from app.ai.context.agent_results import agent_result_service
 from app.models.all_models import ContentProject, ContentDraft, ContentApproval
 import json
+from app.core.limiter import limiter
+from starlette.requests import Request
 
 router = APIRouter()
 
@@ -39,7 +41,9 @@ def get_ai_status(current_user: User = Depends(get_current_user)):
         }
 
 @router.post("/cmo/chat", response_model=AICmoResponse)
+@limiter.limit("10/minute")
 def ai_cmo_chat(
+    request: Request,
     req: ChatRequest,
     brand: Brand = Depends(get_current_brand),
     current_user: User = Depends(get_current_user),

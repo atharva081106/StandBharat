@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getCookie } from 'cookies-next';
 import { useAuth, useDashboard } from './MockProvider';
+import { ApiClient } from '@/lib/api/client';
 
 export type WebsiteAnalysisStatus = 'NOT_ANALYZED' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
@@ -35,6 +36,8 @@ export interface WebsiteAnalysisData {
   } | null;
   analysis_results: any;
   errors: any;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface WebsiteAnalysisContextType {
@@ -84,26 +87,11 @@ export function WebsiteAnalysisProvider({ children }: { children: ReactNode }) {
 
     // API Mode
     try {
-      const token = getCookie('access_token');
-      if (!token) return;
-
-      const res = await fetch(`http://localhost:8000/api/brands/${activeBrand.id}/website-analysis`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Workspace-Id': activeWorkspace.id,
-          'X-Brand-Id': activeBrand.id
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch website analysis');
-      }
-
-      const data = await res.json();
+      const data = await ApiClient.get<WebsiteAnalysisData>(`/api/brands/${activeBrand.id}/website-analysis`);
       setAnalysis(data);
       setError(null);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to fetch website analysis');
     } finally {
       setLoading(false);
     }
@@ -121,27 +109,11 @@ export function WebsiteAnalysisProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const token = getCookie('access_token');
-      if (!token) return;
-
-      const res = await fetch(`http://localhost:8000/api/brands/${activeBrand.id}/website-analysis`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Workspace-Id': activeWorkspace.id,
-          'X-Brand-Id': activeBrand.id
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to trigger analysis');
-      }
-
-      const data = await res.json();
+      const data = await ApiClient.post<WebsiteAnalysisData>(`/api/brands/${activeBrand.id}/website-analysis`, {});
       setAnalysis(data);
       setError(null);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to trigger analysis');
     }
   };
 

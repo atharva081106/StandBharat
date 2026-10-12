@@ -57,7 +57,7 @@ class PublicationAttempt(Base):
     __tablename__ = "publication_attempts"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    publication_id = Column(UUID(as_uuid=True), ForeignKey("publications.id"), nullable=False)
+    publication_id = Column(UUID(as_uuid=True), ForeignKey("publications.id"), nullable=False, index=True)
     
     attempt_number = Column(String, nullable=False) # Store as string or int
     status = Column(String, nullable=False)

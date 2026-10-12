@@ -62,13 +62,13 @@ Output JSON only without markdown blocks.
 """
 
             brand_voice = ""
-            if "brand_voice" in context.brand_context:
-                bv = context.brand_context.get("brand_voice", {})
-                brand_voice = f"Tone: {bv.get('tone')}\nStyle: {bv.get('writing_style')}\nRules: {bv.get('messaging_rules')}"
-
             strategy = ""
-            if "strategy" in context.brand_context:
-                strategy = json.dumps(context.brand_context["strategy"], indent=2)
+            if context.brand_context:
+                if context.brand_context.voice:
+                    bv = context.brand_context.voice
+                    brand_voice = f"Tone: {bv.tone}\nStyle: {bv.writing_style}\nRules: {bv.messaging_rules}"
+                if context.brand_context.strategy:
+                    strategy = context.brand_context.strategy.model_dump_json(indent=2)
 
             user_msg = f"""
 Brand Voice & Rules:
@@ -161,6 +161,7 @@ Generate the draft.
             except Exception as e:
                 db.rollback()
                 output_data = {"raw_response": response.content, "parse_error": str(e)}
+                return AgentResult(status="FAILED", error=f"Parse Error: {str(e)}", output_data=output_data)
 
             return AgentResult(status="SUCCESS", output_data=output_data)
 

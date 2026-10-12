@@ -19,7 +19,7 @@ class DecisionEngine:
         """
         last_run = db.query(AgentRun).filter(
             AgentRun.brand_id == brand_id,
-            AgentRun.agent_type == "analytics",
+            AgentRun.agent_id == "analytics",
             AgentRun.status == "SUCCESS"
         ).order_by(AgentRun.completed_at.desc()).first()
 
@@ -41,7 +41,7 @@ class DecisionEngine:
         """
         last_run = db.query(AgentRun).filter(
             AgentRun.brand_id == brand_id,
-            AgentRun.agent_type == "competitor",
+            AgentRun.agent_id == "competitor",
             AgentRun.status == "SUCCESS"
         ).order_by(AgentRun.completed_at.desc()).first()
 
@@ -56,7 +56,7 @@ class DecisionEngine:
         """
         last_run = db.query(AgentRun).filter(
             AgentRun.brand_id == brand_id,
-            AgentRun.agent_type == "growth",
+            AgentRun.agent_id == "growth",
             AgentRun.status == "SUCCESS"
         ).order_by(AgentRun.completed_at.desc()).first()
 
@@ -67,14 +67,14 @@ class DecisionEngine:
         
         recent_analytics = db.query(AgentRun).filter(
             AgentRun.brand_id == brand_id,
-            AgentRun.agent_type == "analytics",
+            AgentRun.agent_id == "analytics",
             AgentRun.status == "SUCCESS",
             AgentRun.completed_at >= recent_limit
         ).first()
 
         recent_competitor = db.query(AgentRun).filter(
             AgentRun.brand_id == brand_id,
-            AgentRun.agent_type == "competitor",
+            AgentRun.agent_id == "competitor",
             AgentRun.status == "SUCCESS",
             AgentRun.completed_at >= recent_limit
         ).first()

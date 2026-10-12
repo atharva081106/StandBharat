@@ -4,11 +4,15 @@ from app.api import deps
 from app.schemas.user import UserCreate, UserResponse
 from app.models.all_models import User
 from app.core.security import get_password_hash, verify_password, create_access_token
+from app.core.config import settings
+from app.core.limiter import limiter
+from starlette.requests import Request
 
 router = APIRouter()
 
 @router.post("/signup", response_model=UserResponse)
-def signup(user_in: UserCreate, db: Session = Depends(deps.get_db)):
+@limiter.limit("5/minute")
+def signup(request: Request, user_in: UserCreate, db: Session = Depends(deps.get_db)):
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
@@ -20,7 +24,8 @@ def signup(user_in: UserCreate, db: Session = Depends(deps.get_db)):
     return user
 
 @router.post("/login")
-def login(user_in: UserCreate, response: Response, db: Session = Depends(deps.get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, user_in: UserCreate, response: Response, db: Session = Depends(deps.get_db)):
     user = db.query(User).filter(User.email == user_in.email).first()
     if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -31,14 +36,20 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(deps.ge
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=False, # True in production
+        secure=settings.SECURE_COOKIES,
         path="/"
     )
     return {"message": "Login successful"}
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie("access_token", path="/", samesite="lax")
+    response.delete_cookie(
+        "access_token",
+        path="/",
+        samesite="lax",
+        secure=settings.SECURE_COOKIES,
+        httponly=True
+    )
     return {"message": "Logged out"}
 
 @router.get("/me", response_model=UserResponse)

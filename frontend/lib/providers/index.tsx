@@ -17,7 +17,8 @@ import { OrchestratorProvider } from './types/interfaces';
 import { ApiOrchestratorProvider } from './api/ApiOrchestratorProvider';
 import { MockOrchestratorProvider } from './mock/MockOrchestratorProvider';
 
-const DATA_MODE = process.env.NEXT_PUBLIC_DATA_MODE || 'mock';
+const isProduction = process.env.NODE_ENV === 'production';
+const DATA_MODE = process.env.NEXT_PUBLIC_DATA_MODE || (isProduction ? 'api' : 'mock');
 
 interface AppContextType {
   auth: IAuthProvider;

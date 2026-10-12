@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 import uuid
 from typing import Optional
 
@@ -11,5 +11,4 @@ class WorkspaceResponse(BaseModel):
     slug: str
     owner_id: uuid.UUID
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

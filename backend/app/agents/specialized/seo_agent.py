@@ -54,10 +54,26 @@ class SEOAgent(BaseAgent):
         # but for now, we'll use ai_gateway directly inside execute for simplicity, or we can use it via the gateway.
         from app.ai.gateway import ai_gateway
         from app.ai.schemas import AIRequestMessage
-        from app.models.all_models import AIUsageEvent
+        from app.models.all_models import AIUsageEvent, SearchMetrics
         from app.db.session import SessionLocal
         
+        db = SessionLocal()
         try:
+            gsc_data = []
+            metrics = db.query(SearchMetrics).filter(SearchMetrics.brand_id == context.brand_id).order_by(SearchMetrics.date.desc()).limit(100).all()
+            if metrics:
+                for m in metrics:
+                    gsc_data.append({
+                        "date": m.date.isoformat() if m.date else None,
+                        "query": m.query,
+                        "page": m.page,
+                        "clicks": m.clicks,
+                        "impressions": m.impressions,
+                        "ctr": m.ctr,
+                        "position": m.position
+                    })
+            user_message += f"GSC Data (SearchMetrics): {json.dumps(gsc_data)}\n"
+            
             response = ai_gateway.generate(
                 messages=[
                     AIRequestMessage(role="system", content=system_prompt),
@@ -89,8 +105,6 @@ class SEOAgent(BaseAgent):
                 db.commit()
             except Exception as e:
                 db.rollback()
-            finally:
-                db.close()
                 
             try:
                 # Assuming the LLM returns valid JSON or markdown JSON.
@@ -109,3 +123,5 @@ class SEOAgent(BaseAgent):
                 
         except Exception as e:
             return AgentResult(status="FAILED", error=str(e))
+        finally:
+            db.close()

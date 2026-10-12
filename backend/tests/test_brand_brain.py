@@ -98,3 +98,37 @@ def test_brand_context_ai_cmo():
     )
     assert res.status_code == 200
     assert "status" in res.json()
+
+def test_brand_brain_strategy_crud():
+    client, ws_id, brand_id = setup_user_and_workspace()
+    
+    # Update strategy
+    res = client.patch(
+        "/api/brand-brain/strategy",
+        json={
+            "business_strategy": "Grow 10x",
+            "marketing_strategy": "Inbound"
+        },
+        headers={"X-Workspace-ID": ws_id, "X-Brand-ID": brand_id}
+    )
+    assert res.status_code == 200
+    assert res.json()["business_strategy"] == "Grow 10x"
+    assert res.json()["marketing_strategy"] == "Inbound"
+    
+    # Get strategy
+    res2 = client.get(
+        "/api/brand-brain/strategy",
+        headers={"X-Workspace-ID": ws_id, "X-Brand-ID": brand_id}
+    )
+    assert res2.status_code == 200
+    assert res2.json()["business_strategy"] == "Grow 10x"
+    
+    # Tenant isolation check: try to fetch with different brand id
+    _, _, brand_id_2 = setup_user_and_workspace()
+    res3 = client.get(
+        "/api/brand-brain/strategy",
+        headers={"X-Workspace-ID": ws_id, "X-Brand-ID": brand_id_2} # Mismatched workspace/brand won't pass auth check properly, or will return 404
+    )
+    # the deps.py logic might forbid cross-workspace brand access, giving 403 or 404
+    assert res3.status_code in (404, 403)
+

@@ -1,6 +1,7 @@
 # Environment files
 .env
-.env.local
+.env.*
+!.env.example
 *.secret
 credentials
 
@@ -32,3 +33,14 @@ database dumps containing secrets
 .vscode/
 .idea/
 *.swp
+
+# Storage and Runtime Uploads
+storage/
+**/storage/
+
+# Scratch & Temporary Testing Files
+scratch/
+**/scratch/
+*audit_results*.json
+pytest_*.txt
+

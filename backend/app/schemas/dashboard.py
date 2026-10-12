@@ -23,3 +23,10 @@ class DashboardResponse(BaseModel):
     opportunities: List[OpportunityResponse]
     recent_activity: List[ActivityEventResponse]
     system_status: str # e.g. "Operational", "Degraded"
+
+class WebsiteAnalyticsResponse(BaseModel):
+    brand_id: uuid.UUID
+    workspace_id: uuid.UUID
+    website_url: Optional[str] = None
+    ga4: dict
+    gsc: dict

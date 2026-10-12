@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
@@ -11,8 +11,7 @@ class OrchestratorConfigResponse(BaseModel):
     last_run_at: Optional[datetime]
     next_run_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrchestrationRunResponse(BaseModel):
     id: UUID
@@ -26,8 +25,7 @@ class OrchestrationRunResponse(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrchestratorUpdateRequest(BaseModel):
     mode: str

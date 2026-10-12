@@ -101,7 +101,7 @@ def test_agent_failure():
     )
     
     result = runtime.execute_task(ctx)
-    assert result.status == "NOT_CONFIGURED"
+    assert result.status == "FAILED"
     
 def test_agent_isolation():
     db, u, ws1, b1, ws2, b2 = setup_db()

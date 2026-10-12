@@ -6,7 +6,7 @@ from app.agents.result import AgentResult
 from app.ai.gateway import ai_gateway
 from app.ai.schemas import AIRequestMessage
 from app.ai.exceptions import AINotConfiguredException
-from app.models.all_models import AIUsageEvent, MetricSnapshot, ActivityEvent, Opportunity
+from app.models.all_models import AIUsageEvent, MetricSnapshot, ActivityEvent, Opportunity, TrafficMetrics
 from app.db.session import SessionLocal
 
 class AnalyticsAgent(BaseAgent):
@@ -24,8 +24,9 @@ class AnalyticsAgent(BaseAgent):
             # 1. Fetch available data deterministically
             metrics = db.query(MetricSnapshot).filter(MetricSnapshot.brand_id == context.brand_id).order_by(MetricSnapshot.recorded_at.desc()).limit(20).all()
             activities = db.query(ActivityEvent).filter(ActivityEvent.brand_id == context.brand_id).order_by(ActivityEvent.created_at.desc()).limit(20).all()
+            traffic_metrics = db.query(TrafficMetrics).filter(TrafficMetrics.brand_id == context.brand_id).order_by(TrafficMetrics.date.desc()).limit(100).all()
             
-            if not metrics and not activities:
+            if not metrics and not activities and not traffic_metrics:
                 return AgentResult(status="SUCCESS", output_data={
                     "summary": "No data available yet.",
                     "signals": [],
@@ -35,6 +36,13 @@ class AnalyticsAgent(BaseAgent):
 
             metric_summaries = [{"metric": m.metric_name, "value": m.value, "date": str(m.recorded_at)} for m in metrics]
             activity_summaries = [{"type": a.type, "description": a.description, "date": str(a.created_at)} for a in activities]
+            traffic_summaries = [{
+                "date": str(t.date),
+                "source": t.source,
+                "medium": t.medium,
+                "sessions": t.sessions,
+                "conversions": t.conversions
+            } for t in traffic_metrics]
 
             data_context = f"""
 Available Metrics:
@@ -42,6 +50,9 @@ Available Metrics:
 
 Recent Activity:
 {json.dumps(activity_summaries, indent=2)}
+
+Traffic Metrics (GA4):
+{json.dumps(traffic_summaries, indent=2)}
 """
             sys_prompt = f"""You are the Analytics Agent for a brand.
 Review the provided data and produce a structured JSON output with the following keys:

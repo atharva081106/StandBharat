@@ -8,7 +8,7 @@ class AgentResultService:
         for agent_type in ["analytics", "competitor", "growth"]:
             run = db.query(AgentRun).filter(
                 AgentRun.brand_id == brand_id,
-                AgentRun.agent_type == agent_type,
+                AgentRun.agent_id == agent_type,
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
             if run:

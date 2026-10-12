@@ -11,7 +11,8 @@ from app.core.authorization import check_workspace_role
 from app.publishing.schemas import (
     PublisherConnectionResponse,
     PublicationResponse,
-    OAuthConnectResponse
+    OAuthConnectResponse,
+    ReconcilePublicationRequest
 )
 from app.publishing.models import PublisherConnection, Publication
 from app.publishing.service import PublishingService
@@ -78,6 +79,8 @@ def connect_publisher(
     
     if platform == "linkedin":
         client_id = os.environ.get("LINKEDIN_CLIENT_ID", "")
+        if not client_id:
+            raise HTTPException(status_code=500, detail="LinkedIn OAuth configuration is missing (LINKEDIN_CLIENT_ID not set)")
         redirect_uri = os.environ.get("LINKEDIN_REDIRECT_URI", "http://localhost:5000/api/publishers/linkedin/callback")
         scope = urllib.parse.quote("w_member_social r_liteprofile")
         auth_url = f"https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&state={secure_state}&scope={scope}"
@@ -105,24 +108,11 @@ def oauth_callback(
         client_secret = os.environ.get("LINKEDIN_CLIENT_SECRET", "")
         redirect_uri = os.environ.get("LINKEDIN_REDIRECT_URI", "http://localhost:5000/api/publishers/linkedin/callback")
         
-        # If no client ID configured, we are probably in test mock environment where we simulate connection
-        if not client_id:
-            # Simulate a successful connection for testing
-            conn = db.query(PublisherConnection).filter_by(workspace_id=workspace_id, brand_id=brand_id, platform=platform).first()
-            if not conn:
-                conn = PublisherConnection(workspace_id=workspace_id, brand_id=brand_id, platform=platform)
-                db.add(conn)
-            
-            # Use a dummy token to pretend it's connected
-            conn.status = "CONNECTED"
-            conn.encrypted_credentials = encrypt(json.dumps({
-                "access_token": "dummy_test_token",
-                "author_urn": "urn:li:person:dummy"
-            }))
-            conn.external_account_name = "Demo LinkedIn Account"
-            conn.last_validated_at = datetime.datetime.utcnow()
-            db.commit()
-            return {"message": "Simulated successful connection"}
+        if not client_id or not client_secret:
+            raise HTTPException(
+                status_code=500,
+                detail="LinkedIn OAuth configuration is missing (LINKEDIN_CLIENT_ID or LINKEDIN_CLIENT_SECRET not set)"
+            )
 
         # Real OAuth Exchange
         try:
@@ -240,3 +230,26 @@ def get_publication(
     if not pub:
         raise HTTPException(status_code=404, detail="Publication not found")
     return pub
+
+@router.post("/publications/{id}/reconcile", response_model=PublicationResponse)
+def reconcile_publication(
+    id: uuid.UUID,
+    request: ReconcilePublicationRequest,
+    db: Session = Depends(deps.get_db),
+    current_workspace: Any = Depends(deps.get_current_workspace),
+    current_brand: Any = Depends(deps.get_current_brand),
+    current_user: Any = Depends(deps.get_current_user)
+):
+    workspace_id = current_workspace["workspace"].id
+    check_workspace_role(db, current_user.id, workspace_id, ["OWNER", "ADMIN"])
+    service = PublishingService(db)
+    pub = service.get_publication(id, workspace_id)
+    if not pub or pub.brand_id != current_brand.id:
+        raise HTTPException(status_code=404, detail="Publication not found")
+    return service.reconcile_publication(
+        publication_id=id,
+        resolution=request.resolution,
+        external_post_id=request.external_post_id,
+        notes=request.notes
+    )
+

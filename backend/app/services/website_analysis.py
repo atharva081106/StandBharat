@@ -4,6 +4,10 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 import traceback
+import json
+from app.ai.gateway import ai_gateway
+from app.ai.schemas import AIRequestMessage
+from app.ai.exceptions import AINotConfiguredException
 
 class SSRFProtectionError(Exception):
     pass
@@ -154,12 +158,81 @@ class WebsiteAnalysisService:
                 metadata["robots_exists"] = False
                 metadata["sitemap_exists"] = False
 
+            text_content = soup.get_text(separator=' ', strip=True)
+            truncated_text = text_content[:15000]
+
+            analysis_results = {
+                "description": None,
+                "products_services": [],
+                "target_audience": None,
+                "value_proposition": None,
+                "positioning": None,
+                "brand_voice": None,
+                "inferred_topics": []
+            }
+
+            try:
+                ai_gateway._get_provider()
+                prompt = f"""
+                Analyze the following text extracted from a brand's website.
+                
+                Website Text:
+                {truncated_text}
+                
+                Extract the following structured information about the brand:
+                - "description": A concise company description.
+                - "products_services": A list of products or services offered.
+                - "target_audience": The primary target audience.
+                - "value_proposition": The core value proposition.
+                - "positioning": How the brand positions itself in the market.
+                - "brand_voice": The tone and personality of the brand's writing.
+                - "inferred_topics": A list of content topics relevant to the brand.
+                
+                Important: Do NOT invent facts. If the website text lacks evidence for a specific field, return null (for strings) or an empty list (for arrays).
+                
+                Return JSON strictly matching this schema:
+                {{
+                    "description": "string or null",
+                    "products_services": ["string"],
+                    "target_audience": "string or null",
+                    "value_proposition": "string or null",
+                    "positioning": "string or null",
+                    "brand_voice": "string or null",
+                    "inferred_topics": ["string"]
+                }}
+                """
+                
+                res = ai_gateway.generate(
+                    messages=[
+                        AIRequestMessage(role="system", content="You are a data extraction agent. You only extract facts explicitly present in the provided text. Output valid JSON only."),
+                        AIRequestMessage(role="user", content=prompt)
+                    ]
+                )
+                
+                content = res.content.strip()
+                if content.startswith("```json"):
+                    content = content[7:-3]
+                elif content.startswith("```"):
+                    content = content[3:-3]
+                    
+                parsed = json.loads(content.strip())
+                analysis_results.update({
+                    "description": parsed.get("description"),
+                    "products_services": parsed.get("products_services", []),
+                    "target_audience": parsed.get("target_audience"),
+                    "value_proposition": parsed.get("value_proposition"),
+                    "positioning": parsed.get("positioning"),
+                    "brand_voice": parsed.get("brand_voice"),
+                    "inferred_topics": parsed.get("inferred_topics", [])
+                })
+            except AINotConfiguredException:
+                pass
+            except Exception as e:
+                print(f"AI extraction failed: {e}")
+
             return {
                 "metadata": metadata,
-                "analysis_results": {
-                    "inferred_topics": ["Business", "Services"] if word_count > 50 else [],
-                    "value_proposition": "Extracted value prop placeholder."
-                }
+                "analysis_results": analysis_results
             }
         except Exception as e:
             raise Exception(f"Failed to analyze website: {str(e)}\n{traceback.format_exc()}")

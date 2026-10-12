@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation'
 import { useAppProvider } from '@/lib/providers'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Bell, Search, Settings, ChevronDown, Activity, Sparkles, Check, X } from 'lucide-react'
+import { Bell, Search, Settings, ChevronDown, Activity, Sparkles, Check, X, BarChart2 } from 'lucide-react'
+import { useWorkflowStatus } from '@/lib/providers/WorkflowStatusProvider'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { auth, orchestrator, notifications } = useAppProvider()
   const { authState, user, activeWorkspace, activeBrand, logout } = auth
   const orchestratorProvider = orchestrator
+  const { status: workflowStatus } = useWorkflowStatus()
   const [showNotifications, setShowNotifications] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -76,6 +78,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <span className="font-medium">{activeWorkspace?.name || 'Workspace'}</span>
               <ChevronDown className="w-3 h-3 text-[#A9A4A0]" />
             </div>
+            <Link 
+              href="/app/analytics" 
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-[#242222] cursor-pointer transition-colors text-[#A9A4A0] hover:text-[#F5F3F1]"
+              title="Dedicated Website Analytics"
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              <span className="font-medium">Analytics</span>
+            </Link>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-[#242222] cursor-pointer transition-colors text-[#A9A4A0]">
               <Activity className="w-3.5 h-3.5" />
               <span className="font-medium">Agent Log</span>
@@ -84,12 +94,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* CENTER: AI CMO Status */}
-        <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-           <div className="h-2 w-2 rounded-full bg-[#00A650] animate-pulse"></div>
-           <span className="text-[13px] font-medium text-[#A9A4A0]">
-             AI CMO is analyzing <span className="text-[#F5F3F1]">{activeBrand?.website_url?.replace(/^https?:\/\//,'') || activeBrand?.name || 'brand'}</span>...
-           </span>
-        </div>
+        {workflowStatus?.overall_status === 'PROCESSING' ? (
+          <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+             <div className="h-2 w-2 rounded-full bg-[#00A650] animate-pulse"></div>
+             <span className="text-[13px] font-medium text-[#A9A4A0]">
+               AI CMO is analyzing <span className="text-[#F5F3F1]">{activeBrand?.website_url?.replace(/^https?:\/\//,'') || activeBrand?.name || 'brand'}</span>...
+             </span>
+          </div>
+        ) : workflowStatus?.overall_status === 'COMPLETED' ? (
+          <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+             <div className="h-2 w-2 rounded-full bg-[#800020]"></div>
+             <span className="text-[13px] font-medium text-[#A9A4A0]">
+               Brand Brain <span className="text-[#F5F3F1]">Synced</span>
+             </span>
+          </div>
+        ) : null}
 
         {/* RIGHT: Search & User */}
         <div className="flex items-center gap-3">

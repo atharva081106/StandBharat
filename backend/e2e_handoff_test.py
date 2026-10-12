@@ -92,7 +92,7 @@ def test_handoff_flow():
         
         # 5. Verification
         print("\n--- Verifying Handoff Chain ---")
-        handoffs = db.query(AgentHandoff).filter(AgentHandoff.brand_id == b.id).order_by(AgentHandoff.id).all()
+        handoffs = db.query(AgentHandoff).filter(AgentHandoff.brand_id == b.id).order_by(AgentHandoff.created_at).all()
         assert len(handoffs) == 2, "Should have 2 handoffs"
         assert handoffs[0].source_agent == "content_strategy"
         assert handoffs[0].destination_agent == "writer"

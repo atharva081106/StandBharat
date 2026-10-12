@@ -29,6 +29,13 @@ class PerformanceService:
             PublisherConnection.brand_id == publication.brand_id,
             PublisherConnection.platform == publication.platform
         ).first()
+        if not connection:
+            from app.models.all_models import Integration
+            connection = self.db.query(Integration).filter(
+                Integration.workspace_id == publication.workspace_id,
+                Integration.brand_id == publication.brand_id,
+                Integration.provider == publication.platform
+            ).first()
 
         provider = self.get_provider(publication.platform)
         if not provider:

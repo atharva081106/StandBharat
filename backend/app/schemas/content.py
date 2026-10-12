@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
@@ -29,8 +29,7 @@ class ContentProjectResponse(ContentProjectBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContentBriefBase(BaseModel):
     title: str
@@ -72,8 +71,7 @@ class ContentBriefResponse(ContentBriefBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContentDraftResponse(BaseModel):
     id: UUID
@@ -90,8 +88,7 @@ class ContentDraftResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContentVersionResponse(BaseModel):
     id: UUID
@@ -103,8 +100,7 @@ class ContentVersionResponse(BaseModel):
     created_by: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContentApprovalSubmit(BaseModel):
     content_draft_id: UUID
@@ -124,6 +120,9 @@ class ContentApprovalResponse(BaseModel):
     review_comment: Optional[str] = None
     created_at: datetime
     reviewed_at: Optional[datetime] = None
+    draft_title: Optional[str] = None
+    draft_type: Optional[str] = None
+    draft_body: Optional[str] = None
+    project_title: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

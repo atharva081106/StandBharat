@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useWebsiteAnalysis } from '@/lib/providers/WebsiteAnalysisProvider'
-import { Globe, RefreshCw, AlertCircle, CheckCircle2, ChevronRight, Lock } from 'lucide-react'
+import { Globe, RefreshCw, AlertCircle, CheckCircle2, ChevronRight, Lock, BarChart2 } from 'lucide-react'
 
 export function WebsiteAnalysisPanel() {
   const { analysis, loading, error, triggerAnalysis } = useWebsiteAnalysis()
@@ -104,14 +105,24 @@ export function WebsiteAnalysisPanel() {
           <div className="h-1.5 w-1.5 rounded-full bg-[#00A650]"></div>
         </div>
         
-        <button 
-          onClick={handleAnalyze} 
-          disabled={isTriggering}
-          className="flex items-center gap-2 px-3 py-1.5 bg-[#242222] border border-[#373333] rounded-md text-[11px] font-bold text-[#A9A4A0] hover:text-[#F5F3F1] hover:border-[#4A4545] transition-colors disabled:opacity-50"
-        >
-          {isTriggering ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-          Re-analyze
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/app/analytics"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#242222] border border-[#373333] rounded-md text-[11px] font-bold text-[#A9A4A0] hover:text-[#F5F3F1] hover:border-[#4A4545] transition-colors"
+            title="Open Dedicated Website Analytics"
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-[#8F0028]" />
+            Full Analytics
+          </Link>
+          <button 
+            onClick={handleAnalyze} 
+            disabled={isTriggering}
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#242222] border border-[#373333] rounded-md text-[11px] font-bold text-[#A9A4A0] hover:text-[#F5F3F1] hover:border-[#4A4545] transition-colors disabled:opacity-50"
+          >
+            {isTriggering ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Re-analyze
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">

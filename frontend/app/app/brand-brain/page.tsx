@@ -254,20 +254,67 @@ export default function BrandBrain() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm flex-1 flex flex-col">
             <div className="flex-1 space-y-3">
-              <div>
-                <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Business Strategy</span> 
-                <span className={strategy.business_strategy ? "text-[var(--color-text-secondary)] leading-relaxed" : "text-[var(--color-text-muted)] italic"}>
-                  {strategy.business_strategy || "Not defined"}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Marketing Strategy</span> 
-                <span className={strategy.marketing_strategy ? "text-[var(--color-text-secondary)] leading-relaxed" : "text-[var(--color-text-muted)] italic"}>
-                  {strategy.marketing_strategy || "Not defined"}
-                </span>
-              </div>
+              {strategy.business_strategy === 'NOT_CONFIGURED' ? (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg text-yellow-500 text-[13px]">
+                  Strategy generation is not configured.
+                </div>
+              ) : strategy.business_strategy === 'PARTIAL' ? (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/50 rounded-lg text-blue-500 text-[13px]">
+                  Strategy generation is incomplete.
+                </div>
+              ) : strategy.business_strategy === 'FAILED' ? (
+                <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-[13px]">
+                  Strategy generation failed.
+                </div>
+              ) : !strategy.business_strategy ? (
+                <div className="p-3 bg-[#242222] border border-[#373333] rounded-lg text-[#A9A4A0] text-[13px]">
+                  No strategy available yet.
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Business Strategy</span> 
+                    <span className="text-[var(--color-text-secondary)] leading-relaxed line-clamp-2">
+                      {strategy.business_strategy}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Marketing Strategy</span> 
+                    <span className={strategy.marketing_strategy ? "text-[var(--color-text-secondary)] leading-relaxed line-clamp-2" : "text-[var(--color-text-muted)] italic"}>
+                      {strategy.marketing_strategy || "Not defined"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Content Strategy</span> 
+                    <span className={strategy.content_strategy ? "text-[var(--color-text-secondary)] leading-relaxed line-clamp-2" : "text-[var(--color-text-muted)] italic"}>
+                      {strategy.content_strategy || "Not defined"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Channel Strategy</span> 
+                    <span className={strategy.channel_strategy ? "text-[var(--color-text-secondary)] leading-relaxed line-clamp-2" : "text-[var(--color-text-muted)] italic"}>
+                      {strategy.channel_strategy || "Not defined"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Growth Strategy</span> 
+                    <span className={strategy.growth_strategy ? "text-[var(--color-text-secondary)] leading-relaxed line-clamp-2" : "text-[var(--color-text-muted)] italic"}>
+                      {strategy.growth_strategy || "Not defined"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[var(--color-text-primary)] block mb-1">Campaign Strategy</span> 
+                    <span className={strategy.campaign_strategy ? "text-[var(--color-text-secondary)] leading-relaxed line-clamp-2" : "text-[var(--color-text-muted)] italic"}>
+                      {strategy.campaign_strategy || "Not defined"}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
-            <button className="text-sm font-medium text-[var(--color-brand-accent)] hover:text-[var(--color-brand-accent-hover)] text-left mt-4 transition-colors">Edit Strategy</button>
+            {/* Navigates to command-center if possible, otherwise just a visual button for now since there's no router implemented in this component */}
+            <button className="text-sm font-medium text-[var(--color-brand-accent)] hover:text-[var(--color-brand-accent-hover)] text-left mt-4 transition-colors">
+              <a href="/app/command-center">Edit Strategy</a>
+            </button>
           </CardContent>
         </Card>
 

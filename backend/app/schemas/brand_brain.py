@@ -197,6 +197,19 @@ class BrandDocumentResponse(BrandDocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StrategyDocumentBase(BaseModel):
+    type: str
+    version: Optional[int] = 1
+    status: Optional[str] = "ACTIVE"
+    content: Optional[Dict[str, Any]] = None
+    source_context: Optional[Dict[str, Any]] = None
+
+class StrategyDocumentResponse(StrategyDocumentBase):
+    id: UUID
+    brand_id: UUID
+    workspace_id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
 class WebsiteAnalysisResponse(BaseModel):
     id: UUID
     brand_id: UUID
@@ -218,4 +231,5 @@ class BrandContextResponse(BaseModel):
     competitors: List[CompetitorResponse] = []
     strategy: Optional[StrategyResponse] = None
     documents: List[BrandDocumentResponse] = []
+    strategy_documents: List[StrategyDocumentResponse] = []
     model_config = ConfigDict(from_attributes=True)

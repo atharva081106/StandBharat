@@ -17,10 +17,16 @@ export class ApiClient {
     })
     
     if (!response.ok) {
-      let message = 'API Error'
+      let message = `API Error (${response.status})`
       try {
         const errData = await response.json()
-        message = errData.message || message
+        if (typeof errData.detail === 'string') {
+          message = errData.detail
+        } else if (Array.isArray(errData.detail)) {
+          message = errData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ')
+        } else if (errData.message) {
+          message = errData.message
+        }
       } catch (e) {}
       throw new Error(message)
     }

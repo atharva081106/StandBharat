@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 import datetime
 
@@ -13,6 +13,16 @@ from app.schemas.content import (
 )
 
 router = APIRouter()
+
+def _enrich_approval_response(approval: ContentApproval, draft: Optional[ContentDraft] = None, project: Optional[ContentProject] = None) -> ContentApprovalResponse:
+    resp = ContentApprovalResponse.model_validate(approval)
+    if draft:
+        resp.draft_title = draft.title
+        resp.draft_type = draft.content_type
+        resp.draft_body = draft.body
+    if project:
+        resp.project_title = project.title
+    return resp
 
 @router.post("/projects/{id}/submit-review", response_model=ContentApprovalResponse)
 def submit_for_review(
@@ -36,11 +46,23 @@ def submit_for_review(
         
     draft = db.query(ContentDraft).filter(
         ContentDraft.id == submit_in.content_draft_id,
-        ContentDraft.content_project_id == project.id
-    ).first()
+        ContentDraft.content_project_id == project.id,
+        ContentDraft.workspace_id == workspace_id,
+        ContentDraft.brand_id == brand.id
+    ).with_for_update().first()
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
         
+    # Check if there is already a pending approval for this draft
+    existing_pending = db.query(ContentApproval).filter(
+        ContentApproval.content_draft_id == draft.id,
+        ContentApproval.workspace_id == workspace_id,
+        ContentApproval.brand_id == brand.id,
+        ContentApproval.status == "PENDING"
+    ).first()
+    if existing_pending:
+        raise HTTPException(status_code=400, detail="An approval review is already pending for this draft")
+
     approval = ContentApproval(
         content_project_id=project.id,
         content_draft_id=draft.id,
@@ -56,10 +78,12 @@ def submit_for_review(
     
     db.commit()
     db.refresh(approval)
-    return approval
+    return _enrich_approval_response(approval, draft, project)
 
+@router.get("", response_model=List[ContentApprovalResponse])
 @router.get("/approvals", response_model=List[ContentApprovalResponse])
 def get_approvals(
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     workspace_ctx: dict = Depends(get_current_workspace),
@@ -68,11 +92,31 @@ def get_approvals(
     check_workspace_role(db, current_user.id, workspace_ctx["workspace"].id, ["OWNER", "ADMIN", "MARKETER", "EDITOR", "VIEWER"])
     workspace_id = workspace_ctx["workspace"].id
     
-    return db.query(ContentApproval).filter(
+    query = db.query(
+        ContentApproval,
+        ContentDraft,
+        ContentProject
+    ).outerjoin(
+        ContentDraft, ContentApproval.content_draft_id == ContentDraft.id
+    ).outerjoin(
+        ContentProject, ContentApproval.content_project_id == ContentProject.id
+    ).filter(
         ContentApproval.workspace_id == workspace_id,
         ContentApproval.brand_id == brand.id
-    ).order_by(ContentApproval.created_at.desc()).all()
+    )
 
+    if status:
+        query = query.filter(ContentApproval.status == status.upper())
+
+    results = query.order_by(ContentApproval.created_at.desc()).all()
+    
+    approvals_list = []
+    for approval, draft, project in results:
+        approvals_list.append(_enrich_approval_response(approval, draft, project))
+        
+    return approvals_list
+
+@router.get("/{id}", response_model=ContentApprovalResponse)
 @router.get("/approvals/{id}", response_model=ContentApprovalResponse)
 def get_approval(
     id: UUID,
@@ -84,15 +128,27 @@ def get_approval(
     check_workspace_role(db, current_user.id, workspace_ctx["workspace"].id, ["OWNER", "ADMIN", "MARKETER", "EDITOR", "VIEWER"])
     workspace_id = workspace_ctx["workspace"].id
     
-    approval = db.query(ContentApproval).filter(
+    result = db.query(
+        ContentApproval,
+        ContentDraft,
+        ContentProject
+    ).outerjoin(
+        ContentDraft, ContentApproval.content_draft_id == ContentDraft.id
+    ).outerjoin(
+        ContentProject, ContentApproval.content_project_id == ContentProject.id
+    ).filter(
         ContentApproval.id == id,
         ContentApproval.workspace_id == workspace_id,
         ContentApproval.brand_id == brand.id
     ).first()
-    if not approval:
+    
+    if not result:
         raise HTTPException(status_code=404, detail="Approval not found")
-    return approval
+        
+    approval, draft, project = result
+    return _enrich_approval_response(approval, draft, project)
 
+@router.post("/{id}/approve", response_model=ContentApprovalResponse)
 @router.post("/approvals/{id}/approve", response_model=ContentApprovalResponse)
 def approve_content(
     id: UUID,
@@ -108,9 +164,14 @@ def approve_content(
         ContentApproval.id == id,
         ContentApproval.workspace_id == workspace_id,
         ContentApproval.brand_id == brand.id
-    ).first()
+    ).with_for_update().first()
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
+        
+    if approval.status == "APPROVED":
+        raise HTTPException(status_code=400, detail="Approval is already approved")
+    if approval.status == "REJECTED":
+        raise HTTPException(status_code=400, detail="Cannot transition approval from REJECTED to APPROVED")
         
     approval.status = "APPROVED"
     approval.reviewed_by = current_user.id
@@ -126,8 +187,9 @@ def approve_content(
         
     db.commit()
     db.refresh(approval)
-    return approval
+    return _enrich_approval_response(approval, draft, project)
 
+@router.post("/{id}/reject", response_model=ContentApprovalResponse)
 @router.post("/approvals/{id}/reject", response_model=ContentApprovalResponse)
 def reject_content(
     id: UUID,
@@ -144,9 +206,14 @@ def reject_content(
         ContentApproval.id == id,
         ContentApproval.workspace_id == workspace_id,
         ContentApproval.brand_id == brand.id
-    ).first()
+    ).with_for_update().first()
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
+        
+    if approval.status == "REJECTED":
+        raise HTTPException(status_code=400, detail="Approval is already rejected")
+    if approval.status == "APPROVED":
+        raise HTTPException(status_code=400, detail="Cannot transition approval from APPROVED to REJECTED")
         
     approval.status = "REJECTED"
     approval.reviewed_by = current_user.id
@@ -163,8 +230,9 @@ def reject_content(
         
     db.commit()
     db.refresh(approval)
-    return approval
+    return _enrich_approval_response(approval, draft, project)
 
+@router.post("/{id}/request-changes", response_model=ContentApprovalResponse)
 @router.post("/approvals/{id}/request-changes", response_model=ContentApprovalResponse)
 def request_changes(
     id: UUID,
@@ -181,9 +249,12 @@ def request_changes(
         ContentApproval.id == id,
         ContentApproval.workspace_id == workspace_id,
         ContentApproval.brand_id == brand.id
-    ).first()
+    ).with_for_update().first()
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
+        
+    if approval.status in ("APPROVED", "REJECTED"):
+        raise HTTPException(status_code=400, detail=f"Cannot transition approval from {approval.status} to CHANGES_REQUESTED")
         
     approval.status = "CHANGES_REQUESTED"
     approval.reviewed_by = current_user.id
@@ -200,4 +271,4 @@ def request_changes(
         
     db.commit()
     db.refresh(approval)
-    return approval
+    return _enrich_approval_response(approval, draft, project)

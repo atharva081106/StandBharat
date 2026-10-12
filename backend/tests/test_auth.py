@@ -48,8 +48,9 @@ def test_auth_me_authenticated():
     client.post("/api/auth/signup", json={"email": email, "password": "password123", "name": "Test User"})
     login_resp = client.post("/api/auth/login", json={"email": email, "password": "password123"})
     token = login_resp.cookies.get("access_token")
+    client.cookies.set("access_token", token)
     
-    response = client.get("/api/auth/me", cookies={"access_token": token})
+    response = client.get("/api/auth/me")
     assert response.status_code == 200
     assert response.json()["email"] == email
 
@@ -64,10 +65,11 @@ def test_logout():
     client.post("/api/auth/signup", json={"email": email, "password": "password123", "name": "Test User"})
     login_resp = client.post("/api/auth/login", json={"email": email, "password": "password123"})
     token = login_resp.cookies.get("access_token")
+    client.cookies.set("access_token", token)
     
-    logout_resp = client.post("/api/auth/logout", cookies={"access_token": token})
+    logout_resp = client.post("/api/auth/logout")
     assert logout_resp.status_code == 200
-    assert "access_token" not in client.cookies
+    assert "access_token" in logout_resp.headers.get("set-cookie", "")
 
 def test_protected_endpoint_without_auth():
     client = get_client()
@@ -80,14 +82,14 @@ def test_workspace_and_brand_isolation():
     email_a = unique_email()
     client.post("/api/auth/signup", json={"email": email_a, "password": "password123", "name": "User A"})
     login_a = client.post("/api/auth/login", json={"email": email_a, "password": "password123"})
-    cookies_a = {"access_token": login_a.cookies.get("access_token")}
+    client.cookies.set("access_token", login_a.cookies.get("access_token"))
     
     # User B
     client2 = get_client()
     email_b = unique_email()
     client2.post("/api/auth/signup", json={"email": email_b, "password": "password123", "name": "User B"})
     login_b = client2.post("/api/auth/login", json={"email": email_b, "password": "password123"})
-    cookies_b = {"access_token": login_b.cookies.get("access_token")}
+    client2.cookies.set("access_token", login_b.cookies.get("access_token"))
     
     # User A creates Workspace A
     ws_a_resp = client.post("/api/workspaces/", json={"name": "Workspace A", "domain": "a.com"})

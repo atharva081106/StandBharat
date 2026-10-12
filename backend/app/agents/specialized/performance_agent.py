@@ -4,12 +4,14 @@ from typing import Dict, Any, List
 from app.agents.base import BaseAgent
 from app.agents.context import AgentContext
 from app.agents.result import AgentResult
-from app.models.all_models import Opportunity, AIUsageEvent
+from app.models.all_models import Opportunity, AIUsageEvent, TrafficMetrics, SearchMetrics
 from app.models.performance import PerformanceSnapshot
 from app.db.session import SessionLocal
 from app.ai.gateway import ai_gateway
 from app.ai.schemas import AIRequestMessage
 from app.ai.exceptions import AINotConfiguredException
+import datetime
+from sqlalchemy import func
 
 class PerformanceAgent(BaseAgent):
     def __init__(self):
@@ -36,8 +38,8 @@ class PerformanceAgent(BaseAgent):
             ).order_by(PerformanceSnapshot.captured_at.desc()).limit(50).all()
             
             if not snapshots:
-                result.output_data["findings"]["message"] = "No performance data available for analysis"
-                return result
+                # We will check if we have traffic or search data before giving up
+                pass
                 
             snapshot_data = []
             for s in snapshots:
@@ -49,11 +51,70 @@ class PerformanceAgent(BaseAgent):
                     "captured_at": str(s.captured_at)
                 })
                 
+            # Get recent traffic and search metrics (last 7 days)
+            seven_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+            
+            traffic_metrics_raw = db.query(
+                func.date(TrafficMetrics.date).label('date'),
+                func.sum(TrafficMetrics.sessions).label('sessions'),
+                func.sum(TrafficMetrics.pageviews).label('pageviews'),
+                func.avg(TrafficMetrics.engagement_rate).label('engagement_rate'),
+                func.sum(TrafficMetrics.conversions).label('conversions')
+            ).filter(
+                TrafficMetrics.workspace_id == context.workspace_id,
+                TrafficMetrics.brand_id == context.brand_id,
+                TrafficMetrics.date >= seven_days_ago
+            ).group_by(func.date(TrafficMetrics.date)).all()
+            
+            traffic_data = []
+            if traffic_metrics_raw:
+                for row in traffic_metrics_raw:
+                    traffic_data.append({
+                        "date": str(row.date),
+                        "sessions": int(row.sessions or 0),
+                        "pageviews": int(row.pageviews or 0),
+                        "engagement_rate": float(row.engagement_rate or 0.0),
+                        "conversions": int(row.conversions or 0)
+                    })
+                    
+            search_metrics_raw = db.query(
+                func.date(SearchMetrics.date).label('date'),
+                func.sum(SearchMetrics.clicks).label('clicks'),
+                func.sum(SearchMetrics.impressions).label('impressions'),
+                func.avg(SearchMetrics.ctr).label('ctr'),
+                func.avg(SearchMetrics.position).label('position')
+            ).filter(
+                SearchMetrics.workspace_id == context.workspace_id,
+                SearchMetrics.brand_id == context.brand_id,
+                SearchMetrics.date >= seven_days_ago
+            ).group_by(func.date(SearchMetrics.date)).all()
+            
+            search_data = []
+            if search_metrics_raw:
+                for row in search_metrics_raw:
+                    search_data.append({
+                        "date": str(row.date),
+                        "clicks": int(row.clicks or 0),
+                        "impressions": int(row.impressions or 0),
+                        "ctr": float(row.ctr or 0.0),
+                        "avg_position": float(row.position or 0.0)
+                    })
+                    
+            if not snapshots and not traffic_data and not search_data:
+                result.output_data["findings"]["message"] = "No performance, traffic, or search data available for analysis"
+                return result
+                
             prompt = f"""
             Analyze the following recent performance data for the brand.
             
-            Data:
-            {json.dumps(snapshot_data, indent=2)}
+            Social Publishing Data (Recent Snapshots):
+            {json.dumps(snapshot_data, indent=2) if snapshot_data else "No recent social publishing data."}
+            
+            Website Traffic Data (Last 7 Days):
+            {json.dumps(traffic_data, indent=2) if traffic_data else "No recent traffic data available."}
+            
+            Search Console Data (Last 7 Days):
+            {json.dumps(search_data, indent=2) if search_data else "No recent search data available."}
             
             Generate structured performance signals. 
             A signal should have:

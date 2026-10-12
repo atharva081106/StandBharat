@@ -7,11 +7,15 @@ from ..config import ai_config
 import openai
 
 class OpenAIProvider(BaseAIProvider):
+    provider_name = "openai"
+    default_model = "gpt-4o"
+
     def __init__(self):
-        if not ai_config.OPENAI_API_KEY:
-            raise AINotConfiguredException("OpenAI API key is not configured")
+        key = ai_config.OPENAI_API_KEY
+        if not key or key.strip() == "" or key.startswith("your_") or key.startswith("sk-dummy") or "mock" in key.lower():
+            raise AINotConfiguredException("OpenAI API key is not configured or is a placeholder.")
         import openai
-        self.client = openai.OpenAI(api_key=ai_config.OPENAI_API_KEY)
+        self.client = openai.OpenAI(api_key=key)
 
     def generate(
         self,
@@ -50,7 +54,8 @@ class OpenAIProvider(BaseAIProvider):
 
             response = self.client.chat.completions.create(**kwargs)
         except openai.AuthenticationError as e:
-            raise AIAuthException(f"OpenAI Authentication Error: {str(e)}")
+            # DO NOT log str(e) to avoid exposing the invalid API key in logs
+            raise AIAuthException("OpenAI Authentication Error: Invalid or missing API key.")
         except openai.RateLimitError as e:
             raise AIRateLimitException(f"OpenAI Rate Limit Error: {str(e)}")
         except openai.BadRequestError as e:

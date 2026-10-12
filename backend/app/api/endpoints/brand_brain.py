@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db, get_current_brand, get_current_user
-from app.models.all_models import Brand, BrandVoice, Audience, Product, Positioning, Goal, Competitor, BrandStrategy, BrandDocument, User
+from app.models.all_models import Brand, BrandVoice, Audience, Product, Positioning, Goal, Competitor, BrandStrategy, BrandDocument, User, StrategyDocument
 from app.schemas.brand_brain import (
     BrandVoiceUpdate, BrandVoiceResponse,
     AudienceCreate, AudienceUpdate, AudienceResponse,
@@ -14,6 +14,7 @@ from app.schemas.brand_brain import (
     CompetitorCreate, CompetitorUpdate, CompetitorResponse,
     StrategyUpdate, StrategyResponse,
     BrandDocumentResponse,
+    StrategyDocumentResponse,
     BrandContextResponse
 )
 
@@ -34,6 +35,7 @@ def get_brand_brain(
     competitors = db.query(Competitor).filter(Competitor.brand_id == brand.id).all()
     strategy = db.query(BrandStrategy).filter(BrandStrategy.brand_id == brand.id).first()
     documents = db.query(BrandDocument).filter(BrandDocument.brand_id == brand.id).all()
+    strategy_documents = db.query(StrategyDocument).filter(StrategyDocument.brand_id == brand.id).all()
     
     return {
         "brand": brand,
@@ -44,7 +46,8 @@ def get_brand_brain(
         "goals": goals,
         "competitors": competitors,
         "strategy": strategy,
-        "documents": documents
+        "documents": documents,
+        "strategy_documents": strategy_documents
     }
 
 # ----------------- VOICE -----------------
@@ -319,15 +322,19 @@ def update_strategy(
 
 # ----------------- DOCUMENTS -----------------
 import os
-import shutil
 import uuid
-from fastapi import UploadFile, File, Form, BackgroundTasks, HTTPException
+from fastapi import UploadFile, File, Form, BackgroundTasks, HTTPException, status
 from typing import Optional
 
 from app.api import deps
+from app.core.config import settings
 from app.services.document_processor import process_document
-
-STORAGE_DIR = "storage/documents"
+from app.services.storage import (
+    get_storage_service,
+    UploadSizeLimitExceededError,
+    InvalidFileTypeError,
+    StorageError,
+)
 
 @router.get("/documents", response_model=List[BrandDocumentResponse])
 def get_documents(db: Session = Depends(get_db), brand: Brand = Depends(get_current_brand)):
@@ -342,39 +349,42 @@ def upload_document(
     brand: Brand = Depends(get_current_brand),
     current_user: User = Depends(deps.get_current_user)
 ):
-    # Validate extension
-    allowed_extensions = ['.pdf', '.docx', '.txt', '.md', '.csv']
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in allowed_extensions:
-        raise HTTPException(status_code=400, detail=f"Unsupported file format. Supported formats: {', '.join(allowed_extensions)}")
-        
-    # Secure filename and paths
-    # Using uuid for storage filename to prevent path traversal and arbitrary overwrites
-    safe_filename = f"{uuid.uuid4()}{ext}"
-    brand_storage_dir = os.path.join(STORAGE_DIR, str(brand.workspace_id), str(brand.id))
-    os.makedirs(brand_storage_dir, exist_ok=True)
-    
-    file_path = os.path.join(brand_storage_dir, safe_filename)
-    
-    # Save file
+    storage = get_storage_service()
+
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        storage_key, safe_filename = storage.generate_key(
+            brand.workspace_id, brand.id, file.filename
+        )
+    except InvalidFileTypeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    try:
+        bytes_written = storage.upload_file(
+            storage_key,
+            file.file,
+            max_size_bytes=settings.STORAGE_MAX_UPLOAD_SIZE_BYTES
+        )
+    except UploadSizeLimitExceededError as e:
+        max_mb = settings.STORAGE_MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds maximum allowed upload size of {max_mb} MB."
+        )
+    except StorageError as e:
+        raise HTTPException(status_code=500, detail="Failed to persist document")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process document upload")
         
-    file_size = os.path.getsize(file_path)
-    
-    # Create DB record
+    # Create DB record storing the scoped storage key
     doc = BrandDocument(
         id=uuid.uuid4(),
         workspace_id=brand.workspace_id,
         brand_id=brand.id,
         name=file.filename,
-        type=file.content_type or ext,
+        type=file.content_type or os.path.splitext(file.filename)[1].lower(),
         source="upload",
-        file_path=file_path,
-        file_size=file_size,
+        file_path=storage_key,
+        file_size=bytes_written,
         category=category,
         processing_status="UPLOADED",
         retrieval_status="NOT_CONFIGURED",
@@ -399,12 +409,18 @@ def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    # Cleanup file
-    if doc.file_path and os.path.exists(doc.file_path):
+    # Cleanup object from storage
+    if doc.file_path:
+        storage = get_storage_service()
         try:
-            os.remove(doc.file_path)
-        except Exception as e:
-            print(f"Warning: Failed to delete file {doc.file_path}: {str(e)}")
+            storage.delete_file(doc.file_path)
+        except Exception:
+            # Fallback for legacy direct filesystem paths
+            if os.path.exists(doc.file_path):
+                try:
+                    os.remove(doc.file_path)
+                except OSError:
+                    pass
             
     # Remove from DB
     db.delete(doc)

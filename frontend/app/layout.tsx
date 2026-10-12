@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/providers/MockProvider'
 import { BrandBrainContextProvider } from '@/lib/providers/MockProvider'
 import { WebsiteAnalysisProvider } from '@/lib/providers/WebsiteAnalysisProvider'
 import { DocumentProvider } from '@/lib/providers/DocumentProvider'
+import { WorkflowStatusProvider } from '@/lib/providers/WorkflowStatusProvider'
 import { AuthModal } from '@/components/auth-modal'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -26,8 +27,10 @@ export default function RootLayout({
           <BrandBrainContextProvider>
             <WebsiteAnalysisProvider>
               <DocumentProvider>
-                {children}
-                <AuthModal />
+                <WorkflowStatusProvider>
+                  {children}
+                  <AuthModal />
+                </WorkflowStatusProvider>
               </DocumentProvider>
             </WebsiteAnalysisProvider>
           </BrandBrainContextProvider>

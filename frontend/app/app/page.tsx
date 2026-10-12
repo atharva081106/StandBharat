@@ -1,11 +1,12 @@
 "use client"
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAuth, useDashboard, useOrchestrator, useBrandBrain, useAgents } from '@/lib/providers/MockProvider'
 import { 
   Layers, ChevronLeft, ChevronDown, BarChart2, Link as LinkIcon, 
   Globe, FileText, Bot, Search, AlertCircle, ArrowRight, Zap, 
   Target, LineChart, FileCode, Send, Paperclip, CheckCircle2,
-  Lock, Plus, Settings, MessageSquare, Briefcase, User, Sparkles
+  Lock, Plus, Settings, MessageSquare, Briefcase, User, Sparkles, ExternalLink
 } from 'lucide-react'
 
 import { BusinessOverviewPanel } from '@/components/dashboard/context/BusinessOverviewPanel'
@@ -122,7 +123,7 @@ export default function AIWorkspace() {
                 activeNav === 'Website Analysis' ? 'bg-[#2A2828] text-[#F5F3F1] border-l-2 border-[#8F0028]' : 'text-[#A9A4A0] hover:text-[#F5F3F1] hover:bg-[#242222]'
               }`}
             >
-              <Globe className="w-4 h-4" />
+              <Globe className={`w-4 h-4 ${activeNav === 'Website Analysis' ? 'text-[#8F0028]' : ''}`} />
               <span className="text-[13px] font-medium">Website Analysis</span>
             </div>
             <div 
@@ -307,9 +308,13 @@ export default function AIWorkspace() {
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#242222] border border-[#373333] rounded-md text-[11px] font-medium text-[#A9A4A0] cursor-pointer hover:text-[#F5F3F1]">
               Last 30 days <ChevronDown className="w-3 h-3" />
             </div>
-            <button className="text-[#A9A4A0] hover:text-[#F5F3F1]">
-              <LinkIcon className="w-4 h-4" />
-            </button>
+            <Link 
+              href="/app/analytics" 
+              className="text-[#A9A4A0] hover:text-[#F5F3F1] transition-colors" 
+              title="Open Dedicated Website Analytics"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Link>
           </div>
         </div>
 
@@ -333,10 +338,24 @@ export default function AIWorkspace() {
           
           {analyticsTab === 'SEO' && (
             isApi ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                 <BarChart2 className="w-12 h-12 text-[#A9A4A0] mb-4" />
-                 <p className="text-[#F5F3F1] font-bold text-lg">NO_DATA</p>
-                 <p className="text-[#A9A4A0] text-[13px] mt-1">Analytics integration is not configured.</p>
+              <div className="space-y-8">
+                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                   {dataModel?.kpis?.map((kpi: any) => (
+                     <div key={kpi.label} className="bg-[#242222] border border-[#373333] rounded-xl p-5 hover:border-[#4A4545] transition-colors flex flex-col justify-between">
+                       <h3 className="text-[11px] font-bold text-[#A9A4A0] uppercase tracking-wider mb-3">{kpi.label}</h3>
+                       <div className="flex items-end justify-between">
+                         <span className={`text-[20px] font-bold ${kpi.value === 'NOT_CONFIGURED' || kpi.value === 'NO_DATA' ? 'text-[#A9A4A0] text-[14px]' : 'text-[#F5F3F1]'}`}>
+                            {kpi.value === 'NOT_CONFIGURED' ? 'Not Setup' : kpi.value === 'NO_DATA' ? 'No Data' : kpi.value}
+                         </span>
+                         {kpi.value !== 'NO_DATA' && kpi.value !== 'NOT_CONFIGURED' && (
+                           <div className={`flex items-center gap-1 text-[12px] font-bold ${kpi.trend === 'up' ? 'text-[#00A650]' : 'text-[#EF4444]'}`}>
+                             {kpi.change}
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
               </div>
             ) : (
             <>

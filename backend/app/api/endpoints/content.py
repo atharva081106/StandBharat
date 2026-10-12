@@ -13,6 +13,8 @@ from app.schemas.content import (
     ContentBriefCreate, ContentBriefResponse, ContentDraftResponse,
     ContentVersionResponse
 )
+from app.core.limiter import limiter
+from starlette.requests import Request
 
 router = APIRouter()
 
@@ -163,7 +165,9 @@ def get_xxx_content_brief(
     return brief
 
 @router.post("/projects/{id}/generate")
+@limiter.limit("10/minute")
 def generate_content_draft(
+    request: Request,
     id: UUID,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -205,9 +209,9 @@ def generate_content_draft(
     run = AgentRun(
         workspace_id=workspace_id,
         brand_id=brand.id,
-        agent_type="content_writer",
-        task_id=task.id,
-        status="QUEUED"
+        agent_id="content_writer",
+        status="QUEUED",
+        input_context={"brief_id": str(brief.id)}
     )
     db.add(run)
     db.commit()
@@ -235,6 +239,21 @@ def get_xxx_project_drafts(
         ContentDraft.workspace_id == workspace_id,
         ContentDraft.brand_id == brand.id
     ).order_by(ContentDraft.created_at.desc()).all()
+
+@router.get("/drafts", response_model=List[ContentDraftResponse])
+def get_all_drafts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    workspace_ctx: dict = Depends(get_current_workspace),
+    brand: Brand = Depends(get_current_brand)
+):
+    check_workspace_role(db, current_user.id, workspace_ctx["workspace"].id, ["OWNER", "ADMIN", "MARKETER", "EDITOR", "VIEWER"])
+    workspace_id = workspace_ctx["workspace"].id
+    
+    return db.query(ContentDraft).filter(
+        ContentDraft.workspace_id == workspace_id,
+        ContentDraft.brand_id == brand.id
+    ).order_by(ContentDraft.updated_at.desc()).all()
 
 @router.get("/drafts/{id}", response_model=ContentDraftResponse)
 def get_xxx_content_draft(

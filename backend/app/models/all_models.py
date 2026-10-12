@@ -112,7 +112,15 @@ class Campaign(Base):
 class Integration(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
     provider = Column(String)
+    credentials_encrypted = Column(Text, nullable=True)
+    status = Column(String, default="NOT_CONFIGURED")
+    last_sync_at = Column(DateTime(timezone=True), nullable=True)
+    last_error = Column(Text, nullable=True)
+    config = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Opportunity(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -452,3 +460,40 @@ class Notification(Base):
     entity_type = Column(String, nullable=True)
     entity_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class TrafficMetrics(Base):
+    __tablename__ = 'traffic_metrics'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    date = Column(DateTime(timezone=True), index=True)
+    source = Column(String, nullable=True)
+    medium = Column(String, nullable=True)
+    campaign = Column(String, nullable=True)
+    landing_page = Column(String, nullable=True)
+    sessions = Column(Integer, default=0)
+    active_users = Column(Integer, default=0)
+    pageviews = Column(Integer, default=0)
+    engagement_rate = Column(Float, default=0.0)
+    conversions = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint('brand_id', 'date', 'source', 'medium', 'campaign', 'landing_page', name='uq_traffic_metrics'),
+    )
+
+class SearchMetrics(Base):
+    __tablename__ = 'search_metrics'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True)
+    date = Column(DateTime(timezone=True), index=True)
+    query = Column(String, nullable=True, index=True)
+    page = Column(String, nullable=True, index=True)
+    clicks = Column(Integer, default=0)
+    impressions = Column(Integer, default=0)
+    ctr = Column(Float, default=0.0)
+    position = Column(Float, default=0.0)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint('brand_id', 'date', 'query', 'page', name='uq_search_metrics'),
+    )

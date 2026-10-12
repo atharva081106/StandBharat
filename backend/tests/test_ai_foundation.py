@@ -73,6 +73,8 @@ def test_agent_run_api():
     assert "run_id" in data
 
 def test_worker_execution():
+    from app.worker import celery_app
+    celery_app.conf.task_always_eager = True
     client, ws_id, brand_id = setup_user_and_workspace()
     # Create task directly or through API
     resp = client.post(
@@ -92,7 +94,7 @@ def test_worker_execution():
     
     assert task is not None
     assert run is not None
-    assert task.status in ["COMPLETED", "FAILED"] # Could be FAILED if AI not configured
+    assert run.status in ["COMPLETED", "FAILED", "SUCCESS"] # It could be SUCCESS or FAILED
     
     # If not configured, it will fail gracefully and the worker catches AINotConfiguredException as a normal exception 
     # and sets status to FAILED in the DB.

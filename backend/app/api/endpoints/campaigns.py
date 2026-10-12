@@ -5,7 +5,7 @@ import uuid
 
 from app.api.deps import get_db, get_current_brand
 from app.models.all_models import Brand, Campaign
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 router = APIRouter()
 
@@ -21,8 +21,7 @@ class CampaignResponse(BaseModel):
     start_date: str | None
     end_date: str | None
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 @router.get("/", response_model=List[CampaignResponse])
 def get_campaigns(

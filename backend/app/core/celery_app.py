@@ -9,6 +9,12 @@ celery_app = Celery(
 
 celery_app.conf.update(
     task_routes={},
+    include=[
+        "app.orchestrator.scheduler",
+        "app.worker",
+        "app.publishing.tasks",
+        "app.workers.celery_worker"
+    ],
     # Redis Hardening & Reliability Configurations
     broker_connection_retry_on_startup=True,
     broker_pool_limit=10,
@@ -37,7 +43,15 @@ celery_app.conf.beat_schedule = {
         'task': 'orchestrator_tick',
         'schedule': crontab(minute='*/15'),
     },
+    'sync-active-integrations-every-6-hours': {
+        'task': 'app.worker.sync_all_active_integrations',
+        'schedule': crontab(minute='0', hour='*/6'),
+    },
+    'recover-stale-publications-every-30-minutes': {
+        'task': 'recover_stale_publications',
+        'schedule': crontab(minute='*/30'),
+    },
 }
 
-# Auto-discover tasks in our orchestrator module
-celery_app.autodiscover_tasks(["app.orchestrator.scheduler", "app.worker", "app.publishing"])
+# Auto-discover tasks in our modules
+celery_app.autodiscover_tasks(["app.orchestrator.scheduler", "app.worker", "app.publishing", "app.workers.celery_worker"])

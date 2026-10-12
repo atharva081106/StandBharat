@@ -8,6 +8,9 @@ from datetime import datetime
 from app.api import deps
 from app.models.all_models import Brand, WebsiteAnalysis
 from app.services.website_analysis import WebsiteAnalysisService, SSRFProtectionError
+from app.workers.celery_worker import generate_core_brand_strategy
+from app.core.limiter import limiter
+from starlette.requests import Request
 
 router = APIRouter()
 
@@ -40,6 +43,17 @@ async def _run_analysis_task(analysis_id: uuid.UUID, url: str, db: Session):
         analysis.analysis_results = result["analysis_results"]
         analysis.status = "COMPLETED"
         analysis.errors = None
+        
+        # Pre-create BrandStrategy as QUEUED so UI knows it's processing before worker picks it up
+        from app.models.all_models import BrandStrategy
+        strategy = db.query(BrandStrategy).filter_by(brand_id=analysis.brand_id).first()
+        if not strategy:
+            strategy = BrandStrategy(brand_id=analysis.brand_id)
+            db.add(strategy)
+        strategy.business_strategy = "QUEUED"
+        
+        db.commit() # Commit the completed analysis and queued strategy before triggering the celery task
+        generate_core_brand_strategy.delay(str(analysis.workspace_id), str(analysis.brand_id))
     except SSRFProtectionError as e:
         analysis.status = "FAILED"
         analysis.errors = {"message": "Invalid or unsafe URL"}
@@ -47,10 +61,18 @@ async def _run_analysis_task(analysis_id: uuid.UUID, url: str, db: Session):
         analysis.status = "FAILED"
         analysis.errors = {"message": "Failed to analyze website"}
     finally:
+        # If strategy was created as QUEUED but dispatch failed (analysis is FAILED), mark it as FAILED
+        if analysis.status == "FAILED":
+            from app.models.all_models import BrandStrategy
+            strategy = db.query(BrandStrategy).filter_by(brand_id=analysis.brand_id).first()
+            if strategy and strategy.business_strategy == "QUEUED":
+                strategy.business_strategy = "FAILED"
         db.commit()
 
 @router.get("/{brand_id}/website-analysis", response_model=WebsiteAnalysisResponse)
+@limiter.limit("20/minute")
 def get_website_analysis(
+    request: Request,
     brand: Brand = Depends(deps.get_current_brand),
     db: Session = Depends(deps.get_db)
 ):
@@ -73,7 +95,9 @@ def get_website_analysis(
     return analysis
 
 @router.post("/{brand_id}/website-analysis", response_model=WebsiteAnalysisResponse)
+@limiter.limit("5/minute")
 def trigger_website_analysis(
+    request: Request,
     background_tasks: BackgroundTasks,
     brand: Brand = Depends(deps.get_current_brand),
     db: Session = Depends(deps.get_db)
@@ -97,6 +121,26 @@ def trigger_website_analysis(
         db.refresh(analysis)
         
     if analysis.status in ("QUEUED", "RUNNING"):
+        return analysis
+        
+    # If analysis is already completed, just trigger the next step
+    if analysis.status == "COMPLETED" and analysis.analysis_results:
+        from app.models.all_models import BrandStrategy
+        strategy = db.query(BrandStrategy).filter_by(brand_id=analysis.brand_id).first()
+        if not strategy:
+            strategy = BrandStrategy(brand_id=analysis.brand_id)
+            db.add(strategy)
+        
+        # Only dispatch if strategy is not actively running
+        if strategy.business_strategy not in ("QUEUED", "RUNNING"):
+            strategy.business_strategy = "QUEUED"
+            db.commit()
+            db.refresh(analysis)
+            try:
+                generate_core_brand_strategy.delay(str(analysis.workspace_id), str(analysis.brand_id))
+            except Exception as e:
+                strategy.business_strategy = "FAILED"
+                db.commit()
         return analysis
         
     analysis.status = "QUEUED"

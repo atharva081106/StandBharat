@@ -28,7 +28,7 @@ class IntegrationProvider(ABC):
         pass
 
     @abstractmethod
-    def sync(self, workspace_id: str) -> Dict[str, Any]:
+    def sync(self, workspace_id: str, brand_id: str = None, integration_id: str = None) -> Dict[str, Any]:
         """Perform data synchronization (e.g., fetch metrics into DB)"""
         pass
 

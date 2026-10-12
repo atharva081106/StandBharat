@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
@@ -18,8 +18,21 @@ class PublisherConnectionResponse(PublisherConnectionBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+class PublicationAttemptResponse(BaseModel):
+    id: UUID
+    publication_id: UUID
+    attempt_number: str
+    status: str
+    request_metadata: Optional[Dict[str, Any]] = None
+    response_metadata: Optional[Dict[str, Any]] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class PublicationBase(BaseModel):
     platform: str
@@ -40,9 +53,9 @@ class PublicationResponse(PublicationBase):
     created_by: UUID
     created_at: datetime
     updated_at: datetime
+    attempts: Optional[List[PublicationAttemptResponse]] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OAuthConnectResponse(BaseModel):
     authorization_url: str
@@ -53,3 +66,8 @@ class OAuthCallbackRequest(BaseModel):
 
 class PublishRequest(BaseModel):
     pass # No body needed currently, draft_id is in URL
+
+class ReconcilePublicationRequest(BaseModel):
+    resolution: str
+    external_post_id: Optional[str] = None
+    notes: Optional[str] = None
