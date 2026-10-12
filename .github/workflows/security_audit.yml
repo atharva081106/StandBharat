@@ -1,0 +1,69 @@
+name: Security & Dependency Preflight Audit
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  python-dependency-audit:
+    name: Backend Python Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install pip-audit
+        run: pip install --upgrade pip pip-audit
+
+      - name: Run pip-audit scanner on pinned lockfile
+        # Fails closed on any actionable/unaccepted vulnerability.
+        # CVE-2026-85394 is accepted (mitigated by strict algorithms=[settings.ALGORITHM] in deps.py).
+        # PYSEC-2026-1325 is accepted (unpatched side-channel in transitive ecdsa; ECDSA keygen is unused).
+        run: |
+          pip-audit -r backend/requirements.lock \
+            --ignore-vuln CVE-2026-85394 \
+            --ignore-vuln PYSEC-2026-1325
+
+  frontend-dependency-audit:
+    name: Frontend Node.js Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies reproducibly
+        run: npm ci
+
+      - name: Enforce strict dependency audit policy
+        # Enforces zero production vulnerabilities, zero critical vulnerabilities,
+        # and strictly bounds high-severity dev findings to the accepted eslint-config-next / braces advisory.
+        run: npm run audit:policy
+
+  compose-preflight:
+    name: Docker Compose Preflight Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Configuration with safe placeholder env
+        # Validates compose syntax and service topology without creating or modifying local secrets
+        run: docker compose --env-file .env.example config --quiet
