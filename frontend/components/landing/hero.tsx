@@ -41,8 +41,12 @@ export function InteractiveDashboardMockup() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
       onClick={async () => {
-        await login('demo@standbharat.ai', 'demo')
-        router.push('/app')
+        try {
+          await login('demo@standbharat.ai', 'demo')
+          router.push('/app')
+        } catch (e) {
+          console.error('Mockup demo login error:', e)
+        }
       }}
       className="relative z-10 w-full h-[550px] perspective-[2000px] group flex items-center justify-center transform scale-[0.80] lg:scale-[0.85] origin-center -translate-x-4 lg:-translate-x-10 transition-transform cursor-pointer"
     >
@@ -225,6 +229,20 @@ export function InteractiveDashboardMockup() {
 export function HeroSection() {
   const { login } = useAuth()
   const router = useRouter()
+  const [isDemoLoading, setIsDemoLoading] = useState(false)
+
+  const handleDemoLogin = async () => {
+    if (isDemoLoading) return
+    setIsDemoLoading(true)
+    try {
+      await login('demo@standbharat.ai', 'demo')
+      router.push('/app')
+    } catch (err) {
+      console.error('Failed to log into demo account:', err)
+      setIsDemoLoading(false)
+    }
+  }
+
   return (
     <section className="relative overflow-hidden pt-12 pb-10 px-6 lg:px-8 bg-transparent flex items-center min-h-[max(calc(100vh-140px),600px)]">
       
@@ -262,15 +280,13 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Button 
-                onClick={async () => {
-                  await login('demo@standbharat.ai', 'demo')
-                  router.push('/app')
-                }}
+                onClick={handleDemoLogin}
+                disabled={isDemoLoading}
                 size="lg" 
                 variant="outline" 
                 className="h-12 px-8 text-base bg-white text-[#111111] border-[#E8E4DC] hover:bg-white rounded-xl font-semibold backdrop-blur-sm"
               >
-                Try Demo Account
+                {isDemoLoading ? 'Entering Workspace...' : 'Try Demo Account'}
               </Button>
             </div>
           </div>

@@ -36,22 +36,25 @@ class AgentRuntime:
         )
         
         if context:
-            usage = AIUsageEvent(
-                workspace_id=context.workspace_id,
-                brand_id=context.brand_id,
-                user_id=context.user_id,
-                agent_id=self.agent.agent_id,
-                agent_run_id=context.run_id,
-                provider=response.info.provider,
-                model=response.info.model,
-                input_tokens=response.info.input_tokens,
-                output_tokens=response.info.output_tokens,
-                total_tokens=response.info.total_tokens,
-                estimated_cost=response.info.estimated_cost,
-                status="SUCCESS"
-            )
-            self.db.add(usage)
-            self.db.commit()
+            try:
+                usage = AIUsageEvent(
+                    workspace_id=context.workspace_id,
+                    brand_id=context.brand_id,
+                    user_id=context.user_id,
+                    agent_id=self.agent.agent_id,
+                    agent_run_id=context.run_id,
+                    provider=response.info.provider,
+                    model=response.info.model,
+                    input_tokens=response.info.input_tokens,
+                    output_tokens=response.info.output_tokens,
+                    total_tokens=response.info.total_tokens,
+                    estimated_cost=response.info.estimated_cost,
+                    status="SUCCESS"
+                )
+                self.db.add(usage)
+                self.db.commit()
+            except Exception:
+                self.db.rollback()
             
         return response
         

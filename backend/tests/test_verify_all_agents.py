@@ -83,7 +83,7 @@ def test_all_13_agents_execute_dynamically():
         # Check DB updates
         db.refresh(run)
         
-        assert result.status in ["SUCCESS", "FAILED", "COMPLETED", "success", "error", "NOT_CONFIGURED"] # Could be failed if API keys are missing, but it executes!
+        assert result.status in ["SUCCESS", "FAILED", "COMPLETED", "success", "error", "NOT_CONFIGURED", "SUCCESS_WITH_WARNINGS"] # Could be failed if API keys are missing, but it executes!
         assert run.status == result.status
         if result.status == "SUCCESS":
             assert run.output == result.output_data

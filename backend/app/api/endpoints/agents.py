@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import List
 from app.api.deps import get_current_brand, get_current_user
 from app.models.all_models import Brand, User, AgentTask, AgentRun
 from app.db.session import SessionLocal
 from pydantic import BaseModel
 from app.agents.registry import agent_registry
-from app.worker import execute_generic_agent
+from app.worker import execute_generic_agent, _execute_agent_run
 import uuid
 
 router = APIRouter()
@@ -36,6 +36,7 @@ class RunRequest(BaseModel):
 def run_agent(
     agent_id: str,
     req: RunRequest,
+    background_tasks: BackgroundTasks,
     brand: Brand = Depends(get_current_brand),
     current_user: User = Depends(get_current_user)
 ):
@@ -68,7 +69,11 @@ def run_agent(
         db.commit()
         db.refresh(run)
         
-        execute_generic_agent.delay(str(run.id))
+        # Execute run asynchronously in background task, with celery fallback
+        try:
+            background_tasks.add_task(_execute_agent_run, str(run.id))
+        except Exception:
+            execute_generic_agent.delay(str(run.id))
         
         return {"task_id": str(task.id), "run_id": str(run.id)}
     finally:

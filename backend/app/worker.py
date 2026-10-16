@@ -1,6 +1,6 @@
 from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
-from app.models.all_models import AgentRun, AgentTask, AIUsageEvent
+from app.models.all_models import AgentRun, User, WorkspaceMember
 from app.agents.registry import agent_registry
 from app.agents.context import AgentContext
 from app.ai.context.brand_context import brand_context_service
@@ -23,11 +23,13 @@ def _execute_agent_run(run_id_str: str):
             agent = agent_registry.get_agent(run.agent_id)
             
             b_ctx = brand_context_service.get_brand_context(db, run.brand_id, run.workspace_id)
+            member = db.query(WorkspaceMember).filter(WorkspaceMember.workspace_id == run.workspace_id).first()
+            user_id = member.user_id if member else uuid.UUID(int=0)
             context = AgentContext(
                 run_id=run_id,
                 workspace_id=run.workspace_id,
                 brand_id=run.brand_id,
-                user_id=uuid.UUID(int=0) if not b_ctx.brand.user_id else b_ctx.brand.user_id, # Fallback user_id if needed, or query from workspace
+                user_id=user_id,
                 input_data=run.input_context or {},
                 brand_context=b_ctx
             )
@@ -92,7 +94,7 @@ def execute_generic_agent(self, run_id_str: str):
     _execute_agent_run(run_id_str)
 
 @celery_app.task(bind=True, max_retries=3)
-def execute_agent_task(self, task_id_str: str, run_id_str: str):
+def execute_agent_task(self, _task_id_str: str, run_id_str: str):
     _execute_agent_run(run_id_str)
 
 @celery_app.task(bind=True, max_retries=3)
@@ -192,7 +194,7 @@ def sync_all_active_integrations():
         ).all()
         
         dispatched_count = 0
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         for integ in active_integrations:
             # 1. Skip if another run is queued or running
             active_run = db.query(IntegrationSyncRun).filter(

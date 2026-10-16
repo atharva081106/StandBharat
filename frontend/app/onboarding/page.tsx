@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,7 +12,7 @@ const steps = ["Business", "Brand", "Audience", "Goals", "Competitors", "AI Setu
 export default function Onboarding() {
   const [stepIdx, setStepIdx] = useState(0)
   const router = useRouter()
-  const { setAuthState, checkAuth } = useAuth()
+  const { user, authState, setAuthState, activeWorkspace, activeBrand, checkAuth, setAuthModalOpen } = useAuth()
   const [businessName, setBusinessName] = useState("")
   const [website, setWebsite] = useState("")
   const [description, setDescription] = useState("")
@@ -26,63 +26,71 @@ export default function Onboarding() {
 
   const [loading, setLoading] = useState(false)
 
+  // Redirect users who already have a configured workspace & brand to the app
+  useEffect(() => {
+    if (authState === 'loggedIn' && activeWorkspace && activeBrand) {
+      router.push('/app')
+    }
+  }, [authState, activeWorkspace, activeBrand, router])
+
   const handleNext = async () => {
     if (stepIdx < steps.length - 1) {
-      if (stepIdx === 0 && !businessName) {
+      if (stepIdx === 0 && !businessName.trim()) {
          alert("Business name is required")
          return
       }
       setStepIdx(stepIdx + 1)
-      } else {
+    } else {
       setLoading(true)
       try {
-        localStorage.setItem('onboardingData', JSON.stringify({
-          businessName,
-          website,
-          description,
-          valueProposition,
+        const payload = {
+          businessName: businessName.trim(),
+          website: website.trim(),
+          description: description.trim(),
+          valueProposition: valueProposition.trim(),
           brandVoice,
-          targetDemographic,
-          customerPainPoints,
+          targetDemographic: targetDemographic.trim(),
+          customerPainPoints: customerPainPoints.trim(),
           primaryObjective,
-          targetRevenue,
-          competitors: competitors.filter(c => c.trim() !== "")
-        }))
+          targetRevenue: targetRevenue.trim(),
+          competitors: competitors.map(c => c.trim()).filter(Boolean)
+        }
+
+        localStorage.setItem('onboardingData', JSON.stringify(payload))
         
         const isApi = process.env.NEXT_PUBLIC_DATA_MODE === 'api'
         if (isApi) {
+          if (!user) {
+            alert("Please sign up or log in to create your workspace and launch your AI CMO.")
+            setAuthModalOpen(true)
+            setLoading(false)
+            return
+          }
           const { ApiClient } = await import('@/lib/api/client')
-          // Create Workspace
-          const ws = await ApiClient.post<any>('/api/workspaces/', { name: businessName })
-          // Create Brand
-          const br = await ApiClient.post<any>('/api/brands/', {
-            name: businessName,
-            workspace_id: ws.id,
-            website_url: website,
-            description: description
-          }, { headers: { 'X-Workspace-ID': ws.id } })
-          await checkAuth() // To fetch workspace info
 
-          // Submit the rest of the onboarding data to configure the brand
-          await ApiClient.post('/api/onboarding/complete', {
-            businessName,
-            website,
-            description,
-            valueProposition,
-            brandVoice,
-            targetDemographic,
-            customerPainPoints,
-            primaryObjective,
-            targetRevenue,
-            competitors: competitors.filter(c => c.trim() !== "")
-          }, { headers: { 'X-Workspace-ID': ws.id, 'X-Brand-ID': br.id } })
+          // Atomically saves workspace, brand, voice, audience, goals, positioning & competitors to DB
+          const result = await ApiClient.post<any>('/api/onboarding/complete', payload)
+
+          if (result?.workspace_id) {
+            ApiClient.defaultHeaders['X-Workspace-ID'] = result.workspace_id
+          }
+          if (result?.brand_id) {
+            ApiClient.defaultHeaders['X-Brand-ID'] = result.brand_id
+          }
+
+          await checkAuth()
         }
         setAuthState('onboardingComplete')
         router.push('/app')
-      } catch (e) {
-        alert("Failed to complete setup")
+      } catch (e: any) {
+        const errorMsg = e?.message || "Failed to complete setup"
+        alert(errorMsg)
+        if (errorMsg.toLowerCase().includes("not authenticated") || errorMsg.toLowerCase().includes("log in") || errorMsg.toLowerCase().includes("user not found")) {
+          setAuthModalOpen(true)
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
   }
 
@@ -114,7 +122,21 @@ export default function Onboarding() {
             <span className="font-bold text-lg tracking-tight text-[#111111] hidden sm:block">StandBharat</span>
           </Link>
         </div>
-        <div className="w-1/3 flex justify-end">
+        <div className="w-1/3 flex justify-end items-center gap-3">
+          {!user && (
+            <Button
+              variant="ghost"
+              onClick={() => setAuthModalOpen(true)}
+              className="text-[12px] font-semibold text-[#5A5A5A] hover:text-[#111111] h-8 px-2.5 rounded-lg"
+            >
+              Sign In
+            </Button>
+          )}
+          {user && (
+            <span className="text-[12px] font-medium text-[#5A5A5A] hidden lg:inline truncate max-w-[140px]">
+              {user.name || user.email}
+            </span>
+          )}
           <div className="text-[13px] font-bold flex items-center gap-4">
             <span className="text-[#800020] hidden md:block">Step {stepIdx + 1} of {steps.length}</span>
             <div className="flex items-center relative">

@@ -1,7 +1,7 @@
 import pytest
 import uuid
 import json
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -81,7 +81,7 @@ def test_tenant_isolation_and_recovery(tenants):
 
     # --- STRATEGY ISOLATION AND RECOVERY ---
     # Tenant B triggers strategy -> should fail gracefully (no research)
-    with patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
         res_b = generate_core_brand_strategy(str(tenant_b["ws"].id), str(tenant_b["brand"].id))
         assert res_b["status"] == "partial"
         db.expire_all()
@@ -89,7 +89,7 @@ def test_tenant_isolation_and_recovery(tenants):
         assert strat_b.business_strategy == "PARTIAL"
 
     # Tenant A triggers strategy -> mock failure
-    with patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
         res_a = generate_core_brand_strategy(str(tenant_a["ws"].id), str(tenant_a["brand"].id))
         assert res_a["status"] == "error"
         db.expire_all()
@@ -97,7 +97,7 @@ def test_tenant_isolation_and_recovery(tenants):
         assert strat_a.business_strategy == "FAILED"
 
     # Tenant A recovers -> success
-    with patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
         res_a = generate_core_brand_strategy(str(tenant_a["ws"].id), str(tenant_a["brand"].id))
         assert res_a["status"] == "success"
         db.expire_all()
@@ -109,7 +109,7 @@ def test_tenant_isolation_and_recovery(tenants):
         assert strat_b.business_strategy == "PARTIAL"
 
     # --- FOUNDATIONAL DOCUMENTS ISOLATION ---
-    with patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
         res_docs_a = generate_foundational_documents(str(tenant_a["ws"].id), str(tenant_a["brand"].id))
         assert res_docs_a["status"] == "success"
         

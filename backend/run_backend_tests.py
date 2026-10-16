@@ -1,7 +1,7 @@
 import os
 import subprocess
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+import psycopg2  # type: ignore
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore
 
 def reset_test_db():
     print("Connecting to postgres to reset test database...")

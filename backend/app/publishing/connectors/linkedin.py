@@ -8,7 +8,8 @@ from app.publishing.exceptions import (
     NotConfiguredError,
     ProviderError,
     UnsupportedContentError,
-    RateLimitError
+    RateLimitError,
+    InvalidContentError,
 )
 
 @PublisherRegistry.register("linkedin")

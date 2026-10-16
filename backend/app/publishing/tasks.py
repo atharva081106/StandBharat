@@ -62,7 +62,7 @@ def execute_publishing_task(self, publication_id_str: str):
                 attempt.status = "BLOCKED"
                 attempt.error_code = "APPROVAL_REQUIRED"
                 attempt.error_message = sanitize_error_message(error_msg)
-                attempt.completed_at = datetime.datetime.utcnow()
+                attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
                 
                 db.commit()
                 return
@@ -98,11 +98,11 @@ def execute_publishing_task(self, publication_id_str: str):
             # Success
             publication.status = "PUBLISHED"
             publication.external_post_id = result.get("external_id") if isinstance(result, dict) else None
-            publication.published_at = datetime.datetime.utcnow()
+            publication.published_at = datetime.datetime.now(datetime.timezone.utc)
             
             attempt.status = "SUCCESS"
             attempt.response_metadata = clean_result
-            attempt.completed_at = datetime.datetime.utcnow()
+            attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
             
             db.commit()
             
@@ -118,7 +118,7 @@ def execute_publishing_task(self, publication_id_str: str):
             attempt.status = "FAILED"
             attempt.error_code = err_code
             attempt.error_message = sanitized_msg
-            attempt.completed_at = datetime.datetime.utcnow()
+            attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
             
             db.commit()
             
@@ -129,7 +129,7 @@ def execute_publishing_task(self, publication_id_str: str):
                 attempt.status = "FAILED"
                 attempt.error_code = e.code
                 attempt.error_message = sanitized_msg
-                attempt.completed_at = datetime.datetime.utcnow()
+                attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
                 publication.status = "QUEUED"  # Reset status so Celery retry will process it
                 db.commit()
                 
@@ -143,7 +143,7 @@ def execute_publishing_task(self, publication_id_str: str):
                 attempt.status = "FAILED"
                 attempt.error_code = e.code
                 attempt.error_message = sanitized_msg
-                attempt.completed_at = datetime.datetime.utcnow()
+                attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
                 db.commit()
                 
         except Exception as e:
@@ -156,7 +156,7 @@ def execute_publishing_task(self, publication_id_str: str):
             attempt.status = "FAILED"
             attempt.error_code = "UNKNOWN_ERROR"
             attempt.error_message = sanitized_msg
-            attempt.completed_at = datetime.datetime.utcnow()
+            attempt.completed_at = datetime.datetime.now(datetime.timezone.utc)
             db.commit()
             
     finally:
@@ -164,7 +164,7 @@ def execute_publishing_task(self, publication_id_str: str):
 
 
 @celery_app.task(name="recover_stale_publications")
-def recover_stale_publications(timeout_minutes: int = None):
+def recover_stale_publications(timeout_minutes: int | None = None):
     db = SessionLocal()
     try:
         service = PublishingService(db)

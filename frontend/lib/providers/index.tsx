@@ -74,24 +74,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   
-  const fetchWorkspaceContext = async () => {
+  const fetchWorkspaceContext = async (): Promise<boolean> => {
     try {
       const workspaces = await ApiClient.get<any[]>('/api/workspaces/');
-      if (workspaces.length > 0) {
+      if (workspaces && workspaces.length > 0) {
         const ws = workspaces[0];
         setActiveWorkspace(ws);
         ApiClient.defaultHeaders['X-Workspace-ID'] = ws.id;
 
         const brands = await ApiClient.get<any[]>('/api/brands/');
-        if (brands.length > 0) {
+        if (brands && brands.length > 0) {
           const br = brands[0];
           setActiveBrand(br);
           ApiClient.defaultHeaders['X-Brand-ID'] = br.id;
+          await fetchNotifications();
+          return true;
         }
+      } else {
+        setActiveWorkspace(null);
+        setActiveBrand(null);
       }
       await fetchNotifications();
+      return false;
     } catch (e) {
       console.error("Failed to load workspace context", e);
+      return false;
     }
   };
 
@@ -100,17 +107,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const u = await ApiClient.get<any>('/api/auth/me');
         setUser(u);
-        await fetchWorkspaceContext();
-        setAuthState('loggedIn');
+        const hasContext = await fetchWorkspaceContext();
+        if (hasContext || u.has_workspace) {
+          setAuthState('loggedIn');
+        } else {
+          setAuthState('needsOnboarding');
+        }
       } catch (e) {
         setUser(null);
+        setActiveWorkspace(null);
+        setActiveBrand(null);
         setAuthState('loggedOut');
       }
     } else {
       if (authState === 'loading') {
         setActiveWorkspace(mockWorkspaces[0]);
         setActiveBrand(mockBrands[0]);
-        setAuthState('loggedOut'); // Wait, the original set 'loggedOut' if loading. Let's keep that but set mock contexts.
+        setAuthState('loggedOut');
       }
     }
   };

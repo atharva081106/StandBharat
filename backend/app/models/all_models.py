@@ -107,7 +107,16 @@ class ContentAsset(Base):
 class Campaign(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspace.id'), index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey('brand.id'), index=True, nullable=True)
+    name = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
     status = Column(String, default="DRAFT")
+    budget = Column(Float, nullable=True)
+    spent = Column(Float, nullable=True)
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
     
 class Integration(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

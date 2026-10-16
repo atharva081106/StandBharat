@@ -1,8 +1,7 @@
 import pytest
 import uuid
-import json
 from unittest.mock import patch, MagicMock
-from app.models.all_models import Workspace, Brand, User, WebsiteAnalysis, BrandStrategy, Audience, BrandVoice, Positioning
+from app.models.all_models import Workspace, Brand, User, WebsiteAnalysis, BrandStrategy, StrategyDocument
 from app.db.session import SessionLocal
 
 def setup_test_data():
@@ -69,6 +68,7 @@ def test_generate_strategy_success(mock_ai_response):
             assert result2["status"] == "skipped"
             
     finally:
+        db.query(StrategyDocument).filter_by(brand_id=brand.id).delete()
         db.query(BrandStrategy).filter_by(brand_id=brand.id).delete()
         db.query(WebsiteAnalysis).filter_by(brand_id=brand.id).delete()
         db.query(Brand).filter_by(id=brand.id).delete()
@@ -125,6 +125,7 @@ def test_generate_strategy_missing_ai_config():
             assert strategy.business_strategy == "NOT_CONFIGURED"
             
     finally:
+        db.query(StrategyDocument).filter_by(brand_id=brand.id).delete()
         db.query(BrandStrategy).filter_by(brand_id=brand.id).delete()
         db.query(WebsiteAnalysis).filter_by(brand_id=brand.id).delete()
         db.query(Brand).filter_by(id=brand.id).delete()
@@ -163,6 +164,7 @@ def test_generate_strategy_tenant_isolation(mock_ai_response):
             assert result2["status"] == "error"
             
     finally:
+        db1.query(StrategyDocument).filter(StrategyDocument.brand_id.in_([brand.id, brand2.id])).delete()
         db1.query(BrandStrategy).filter(BrandStrategy.brand_id.in_([brand.id, brand2.id])).delete()
         db1.query(WebsiteAnalysis).filter(WebsiteAnalysis.brand_id.in_([brand.id, brand2.id])).delete()
         db1.query(Brand).filter(Brand.id.in_([brand.id, brand2.id])).delete()

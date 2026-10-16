@@ -1,6 +1,6 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, Union, List
-from pydantic import ConfigDict, field_validator, model_validator
+from pydantic import field_validator, model_validator
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "StandBharat API"
@@ -114,7 +114,7 @@ class Settings(BaseSettings):
             )
         return self
 
-    model_config = ConfigDict(env_file=(".env", "../.env"), extra="ignore")
+    model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
 settings = Settings()
 

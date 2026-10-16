@@ -1,7 +1,7 @@
 import pytest
 import uuid
 import json
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.workers.celery_worker import generate_core_brand_strategy, generate_foundational_documents
 from app.models.all_models import BrandStrategy, StrategyDocument, Workspace, Brand, User, WebsiteAnalysis, Base
 from app.api import deps
@@ -52,7 +52,7 @@ def test_malformed_ai_output_recovery(setup_db_for_reliability):
     from app.ai.schemas import AIResponse
     malformed_response = AIResponse(content="This is not valid JSON", provider="mock", model="mock", input_tokens=0, output_tokens=0, total_tokens=0, info={"provider": "mock", "model": "mock"})
     
-    with patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
         res = generate_core_brand_strategy(str(ws_id), str(brand_id))
         assert res["status"] == "error"
         assert "Expecting value" in res["reason"] # json decode error
@@ -85,7 +85,7 @@ def test_malformed_ai_output_recovery(setup_db_for_reliability):
     })
     valid_response = AIResponse(content=valid_content, provider="mock", model="mock", input_tokens=0, output_tokens=0, total_tokens=0, info={"provider": "mock", "model": "mock"})
     
-    with patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=valid_response):
         res = generate_core_brand_strategy(str(ws_id), str(brand_id))
         assert res["status"] == "success"
         
@@ -102,7 +102,7 @@ def test_malformed_ai_output_recovery(setup_db_for_reliability):
         assert docs[0].content["title"] == "Recovered Title"
         
     # 3. Verify Idempotency - Next runs should SKIP and not modify data
-    with patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
+    with patch("app.ai.gateway.AIGateway._get_provider", return_value=MagicMock()), patch("app.ai.gateway.AIGateway.generate", return_value=malformed_response):
         # Even with malformed response mocked, it shouldn't be called
         res = generate_core_brand_strategy(str(ws_id), str(brand_id))
         assert res["status"] == "skipped"

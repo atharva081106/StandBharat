@@ -8,7 +8,7 @@ import openai
 
 class MistralProvider(BaseAIProvider):
     provider_name = "mistral"
-    default_model = "codestral-latest"
+    default_model = "open-mistral-7b"
 
     def __init__(self):
         key = ai_config.MISTRAL_API_KEY

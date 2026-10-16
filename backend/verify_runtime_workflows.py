@@ -1,9 +1,10 @@
 import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import uuid
 import time
 import requests
-import psycopg2
+# psycopg2 optional
 from urllib.parse import urlparse
 
 BASE_URL = os.environ.get("TEST_API_URL", "http://localhost:8000")
@@ -193,14 +194,18 @@ with patch("app.publishing.tasks.execute_publishing_task.delay") as mock_delay:
     assert pub_data["status"] == "QUEUED"
     pub_id = pub_data["id"]
     print(f"[PASS] Approved draft enqueued -> Publication ({pub_id}) in status QUEUED")
+    time.sleep(2)
+
+from app.publishing.service import PublishingService
 
 # Execute publication task using mocked provider
-with patch("app.publishing.registry.PublisherRegistry.get_connector") as mock_conn:
+with patch("app.publishing.registry.PublisherRegistry.get_connector") as mock_conn, \
+     patch.object(PublishingService, "get_credentials", return_value={"access_token": "dummy"}):
     mock_instance = MagicMock()
     mock_instance.publish.return_value = {"external_id": "urn:li:share:test987654", "status": "CONFIRMED"}
     mock_conn.return_value = mock_instance
     
-    execute_publishing_task(pub_id)
+    execute_publishing_task.apply(args=[pub_id])
 
 # Verify database state for publication and attempt
 db = SessionLocal()
@@ -209,7 +214,7 @@ assert pub_record is not None
 assert pub_record.status == "PUBLISHED"
 assert pub_record.external_post_id == "urn:li:share:test987654"
 assert len(pub_record.attempts) >= 1
-attempt = pub_record.attempts[0]
+attempt = pub_record.attempts[-1]
 assert attempt.status == "SUCCESS"
 assert attempt.response_metadata["external_id"] == "urn:li:share:test987654"
 db.close()
@@ -263,7 +268,11 @@ print(f"[PASS] Celery worker processed document: {exec_res.stdout.strip()}")
 # Test Persistence Across Container Restart
 print("\n--- 5. Checking Persistence Across Container Restart ---")
 print("[INFO] Restarting backend and worker containers...")
-restart_res = subprocess.run(["docker", "compose", "restart", "backend", "celery_worker"], capture_output=True, text=True)
+restart_res = subprocess.run(
+    ["docker", "compose", "-f", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "docker-compose.yml")), "restart", "backend", "celery_worker"],
+    capture_output=True,
+    text=True
+)
 assert restart_res.returncode == 0, f"Container restart failed: {restart_res.stderr}"
 
 # Wait for backend healthcheck

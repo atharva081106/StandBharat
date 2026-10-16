@@ -11,7 +11,7 @@ class LinkedInPerformanceProvider(PerformanceProvider):
     def get_available_metrics(self) -> List[str]:
         return ["impressions", "engagements", "likes", "comments", "shares", "clicks"]
 
-    def _get_access_token(self, connection: Any) -> str:
+    def _get_access_token(self, connection: Any) -> str | None:
         if not connection or not connection.encrypted_credentials:
             return None
         import json

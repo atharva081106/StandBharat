@@ -1,14 +1,19 @@
-from typing import Any
+from typing import Any, ClassVar
 from sqlalchemy.orm import as_declarative, declared_attr
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, MetaData
 from sqlalchemy.sql import func
 
 @as_declarative()
 class Base:
+    metadata: ClassVar[MetaData]
     id: Any
-    __name__: str
+    __name__: ClassVar[str]
     
-    @declared_attr
+    def __init__(self, **kwargs: Any) -> None:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+            
+    @declared_attr.directive
     def __tablename__(cls) -> str:
         return cls.__name__.lower()
         

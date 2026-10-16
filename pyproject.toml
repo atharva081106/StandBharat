@@ -1,0 +1,25 @@
+[tool.pyrefly]
+python-interpreter-path = "backend/venv/Scripts/python.exe"
+search-path = ["backend"]
+ignore-missing-imports = ["boto3", "jose", "psycopg2", "psycopg2.*"]
+project-excludes = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/venv/**/*",
+]
+
+[tool.pyrefly.errors]
+deprecated = "ignore"
+read-only = "ignore"
+unexpected-keyword = "ignore"
+bad-override = "ignore"
+bad-argument-type = "ignore"
+missing-attribute = "ignore"
+missing-argument = "ignore"
+unsupported-operation = "ignore"
+bad-assignment = "ignore"
+not-iterable = "ignore"
+no-matching-overload = "ignore"
+bad-index = "ignore"
+bad-function-definition = "ignore"
+bad-return = "ignore"

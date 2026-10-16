@@ -3,7 +3,7 @@ from app.models.all_models import Notification
 import uuid
 
 class NotificationService:
-    def create_notification(self, db: Session, workspace_id: uuid.UUID, brand_id: uuid.UUID, title: str, message: str, type: str = "info", severity: str = "normal", user_id: uuid.UUID = None, entity_type: str = None, entity_id: str = None):
+    def create_notification(self, db: Session, workspace_id: uuid.UUID, brand_id: uuid.UUID, title: str, message: str, type: str = "info", severity: str = "normal", user_id: uuid.UUID | None = None, entity_type: str | None = None, entity_id: str | None = None):
         notif = Notification(
             workspace_id=workspace_id,
             brand_id=brand_id,

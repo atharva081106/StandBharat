@@ -32,7 +32,7 @@ def get_ai_status(current_user: User = Depends(get_current_user)):
         provider = ai_gateway._get_provider()
         return {
             "configured": True,
-            "provider": ai_config.DEFAULT_PROVIDER
+            "provider": getattr(provider, "provider_name", ai_config.DEFAULT_PROVIDER)
         }
     except AINotConfiguredException:
         return {
@@ -138,8 +138,8 @@ def ai_cmo_chat(
                     tool_call_id=tc.id
                 ))
             
-            # Second generation call
-            res = ai_gateway.generate(messages=messages, max_tokens=1000, tools=CMO_TOOLS)
+            # Second generation call without tools so model outputs final answer
+            res = ai_gateway.generate(messages=messages, max_tokens=1500, tools=None)
             
         return {"status": "SUCCESS", "response": res.content or ""}
     except AINotConfiguredException:

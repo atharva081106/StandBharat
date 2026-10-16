@@ -8,7 +8,7 @@ from app.agents.registry import agent_registry
 from app.worker import execute_generic_agent
 
 class OrchestratorService:
-    def get_config(self, db: Session, brand_id: UUID) -> OrchestratorConfig:
+    def get_config(self, db: Session, brand_id: UUID) -> Optional[OrchestratorConfig]:
         config = db.query(OrchestratorConfig).filter(OrchestratorConfig.brand_id == brand_id).first()
         return config
 
@@ -57,6 +57,7 @@ class OrchestratorService:
             # Evaluate
             decision = "SKIP"
             reason = ""
+            input_data = {}
             
             if agent_id == "analytics":
                 decision, reason = decision_engine.evaluate_analytics(db, config.brand_id)
@@ -88,7 +89,7 @@ class OrchestratorService:
             
             # Enqueue if RUN
             if decision == "RUN":
-                self._enqueue_agent(db, config.workspace_id, config.brand_id, agent_id, input_data if 'input_data' in locals() else {})
+                self._enqueue_agent(db, config.workspace_id, config.brand_id, agent_id, input_data)
 
         config.last_run_at = datetime.utcnow()
         db.commit()

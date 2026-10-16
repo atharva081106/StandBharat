@@ -56,7 +56,7 @@ def get_workflow_status(
     brand: Brand = Depends(deps.get_current_brand),
     db: Session = Depends(deps.get_db)
 ):
-    if str(brand_id) != str(brand.id):
+    if brand_id != str(brand.id):
         raise HTTPException(status_code=403, detail="Path brand_id does not match authorized context")
         
     from app.models.all_models import WebsiteAnalysis, BrandStrategy, StrategyDocument

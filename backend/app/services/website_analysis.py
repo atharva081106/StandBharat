@@ -110,13 +110,14 @@ class WebsiteAnalysisService:
             
             for a in soup.find_all('a', href=True):
                 href = a.get('href')
-                if href.startswith('http'):
-                    if urlparse(href).netloc == base_domain:
+                if isinstance(href, str):
+                    if href.startswith('http'):
+                        if urlparse(href).netloc == base_domain:
+                            internal_links += 1
+                        else:
+                            external_links += 1
+                    elif href.startswith('/'):
                         internal_links += 1
-                    else:
-                        external_links += 1
-                elif href.startswith('/'):
-                    internal_links += 1
 
             word_count = len(soup.get_text(separator=' ', strip=True).split())
 

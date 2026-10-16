@@ -1,3 +1,7 @@
+import logging
+from contextlib import asynccontextmanager
+from typing import Any, Callable, cast
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
@@ -9,33 +13,12 @@ from app.core.limiter import limiter
 from fastapi.responses import JSONResponse
 from app.core.security import sanitize_error_message
 
-is_prod = settings.ENVIRONMENT.lower() == "production"
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    docs_url=None if is_prod else "/docs",
-    redoc_url=None if is_prod else "/redoc",
-    openapi_url=None if is_prod else "/openapi.json",
-)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(api_router, prefix="/api")
-
-import logging
-
 logger = logging.getLogger(__name__)
 
-@app.on_event("startup")
-def startup_diagnostics():
+is_prod = settings.ENVIRONMENT.lower() == "production"
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     logger.info("Running StandBharat startup diagnostics...")
     if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
         logger.warning("Google OAuth configuration is incomplete! GA4/GSC integrations will not function. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.")
@@ -46,6 +29,37 @@ def startup_diagnostics():
         logger.warning("LinkedIn OAuth configuration is incomplete! LinkedIn publishing will not function. Please configure LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.")
     else:
         logger.info("LinkedIn OAuth configuration is present.")
+
+    try:
+        from app.db.session import SessionLocal
+        from app.db.seed import ensure_demo_user
+        db = SessionLocal()
+        ensure_demo_user(db)
+        db.close()
+    except Exception as e:
+        logger.warning(f"Could not auto-seed demo user: {e}")
+
+    yield
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, cast(Callable[..., Any], _rate_limit_exceeded_handler))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 def root():

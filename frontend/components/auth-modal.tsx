@@ -93,16 +93,7 @@ export function AuthModal() {
               </svg>
               Continue with Google
             </Button>
-            <Button variant="outline" className="w-full h-10 bg-white hover:bg-[#FAF8F3] border-[#E8E4DC] text-[#111111] font-bold text-sm rounded-xl gap-2.5">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" fill="#00a4ef"/>
-                <path d="M11.4 11.4H0V0h11.4v11.4z" fill="#f25022"/>
-                <path d="M24 11.4H12.6V0H24v11.4z" fill="#7fba00"/>
-                <path d="M11.4 24H0V12.6h11.4V24z" fill="#00a4ef"/>
-                <path d="M24 24H12.6V12.6H24V24z" fill="#ffb900"/>
-              </svg>
-              Continue with Microsoft
-            </Button>
+
           </div>
 
           <div className="relative flex items-center py-1.5 mb-5">

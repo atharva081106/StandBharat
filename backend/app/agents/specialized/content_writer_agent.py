@@ -31,23 +31,70 @@ class ContentWriterAgent(BaseAgent):
         )
 
     def execute(self, context: AgentContext) -> AgentResult:
+        brief_id = context.input_data.get("brief_id")
+        topic = context.input_data.get("topic") or context.input_data.get("prompt") or context.input_data.get("title")
+        if not brief_id and not topic:
+            return AgentResult(
+                status="FAILED",
+                output_data={},
+                error="Missing brief_id in input_data. Provide a valid brief_id or topic."
+            )
+
         db = SessionLocal()
         try:
-            brief_id = context.input_data.get("brief_id")
             if not brief_id:
-                return AgentResult(status="FAILED", error="Missing brief_id in input data")
+                brand_name = context.brand_context.brand.name if (context.brand_context and context.brand_context.brand) else "StandBharat"
+                if not topic:
+                    # Check for latest brief or generate default topic
+                    latest_brief = db.query(ContentBrief).filter(ContentBrief.brand_id == context.brand_id).order_by(ContentBrief.created_at.desc()).first()
+                    if latest_brief:
+                        brief = latest_brief
+                        project = db.query(ContentProject).filter(ContentProject.id == brief.content_project_id).first()
+                        topic = brief.title
+                    else:
+                        topic = f"The Autonomous Growth Engine: How {brand_name} Scales Modern Marketing"
+                
+                channel = context.input_data.get("channel") or "blog"
+                
+                project = ContentProject(
+                    workspace_id=context.workspace_id,
+                    brand_id=context.brand_id,
+                    title=topic,
+                    content_type=channel,
+                    status="IN_PROGRESS"
+                )
+                db.add(project)
+                db.commit()
+                db.refresh(project)
+                
+                brief = ContentBrief(
+                    workspace_id=context.workspace_id,
+                    brand_id=context.brand_id,
+                    content_project_id=project.id,
+                    title=topic,
+                    content_type=channel,
+                    objective=f"Engage audiences with high-impact story on {topic}",
+                    target_audience="Target Market & Prospective Customers",
+                    key_message=f"{brand_name} offers premium, verified {topic}",
+                    tone="Inspiring, authoritative, authentic",
+                    call_to_action=f"Learn more at {brand_name.lower().replace(' ', '')}.com",
+                    keywords=topic
+                )
+                db.add(brief)
+                db.commit()
+                db.refresh(brief)
+            else:
+                brief = db.query(ContentBrief).filter(
+                    ContentBrief.id == brief_id,
+                    ContentBrief.brand_id == context.brand_id
+                ).first()
 
-            brief = db.query(ContentBrief).filter(
-                ContentBrief.id == brief_id,
-                ContentBrief.brand_id == context.brand_id
-            ).first()
+                if not brief:
+                    return AgentResult(status="FAILED", error="Content brief not found")
 
-            if not brief:
-                return AgentResult(status="FAILED", error="Content brief not found")
-
-            project = db.query(ContentProject).filter(
-                ContentProject.id == brief.content_project_id
-            ).first()
+                project = db.query(ContentProject).filter(
+                    ContentProject.id == brief.content_project_id
+                ).first()
 
             sys_prompt = f"""You are an expert Content Writer for {context.brand_context.brand.name if context.brand_context else 'a brand'}.
 Your job is to generate a high-quality content draft based on the provided Content Brief and Brand Context.

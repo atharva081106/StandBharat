@@ -14,6 +14,15 @@ class BrandVoiceBase(BaseModel):
     words_to_use: Optional[str] = None
     words_to_avoid: Optional[str] = None
     messaging_rules: Optional[str] = None
+    
+    def get(self, item: str, default: Optional[str] = None) -> Optional[str]:
+        return getattr(self, item, default)
+
+    def __getitem__(self, item: str):
+        val = getattr(self, item, None)
+        if val is not None:
+            return val
+        raise KeyError(item)
 
 class BrandVoiceUpdate(BrandVoiceBase):
     pass
@@ -233,3 +242,32 @@ class BrandContextResponse(BaseModel):
     documents: List[BrandDocumentResponse] = []
     strategy_documents: List[StrategyDocumentResponse] = []
     model_config = ConfigDict(from_attributes=True)
+
+    def __getitem__(self, item: str) -> Any:
+        val = getattr(self, item, None)
+        if val is not None:
+            return val
+        if item == "business_overview":
+            return getattr(self, "brand", {})
+        if item == "brand_voice":
+            return getattr(self, "voice", {})
+        raise KeyError(item)
+
+    def __contains__(self, item: str) -> bool:
+        if hasattr(self, item) and getattr(self, item) is not None:
+            return True
+        if item == "business_overview" and getattr(self, "brand", None) is not None:
+            return True
+        if item == "brand_voice" and getattr(self, "voice", None) is not None:
+            return True
+        return False
+
+    def get(self, item: str, default: Any = None) -> Any:
+        val = getattr(self, item, None)
+        if val is not None:
+            return val
+        if item == "business_overview":
+            return getattr(self, "brand", default)
+        if item == "brand_voice":
+            return getattr(self, "voice", default)
+        return default

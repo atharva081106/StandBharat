@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
-from jose import jwt
+from jose import jwt  # type: ignore
 import bcrypt
 from app.core.config import settings
 
@@ -35,7 +35,7 @@ def sanitize_error_message(message: Optional[str]) -> Optional[str]:
     """
     if not message:
         return message
-    msg = str(message)
+    msg = message
     # Redact URL basic auth: https://user:pass@host
     msg = re.sub(r'://([^:]+):([^@]+)@', r'://\1:[REDACTED]@', msg)
     # Redact Authorization header / Bearer token

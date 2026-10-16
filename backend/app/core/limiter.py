@@ -21,7 +21,7 @@ def get_client_id(request: Request) -> str:
         # Decode token to get user id (we'll just use the token string itself as a hash for limiting
         # to avoid hitting DB or importing JWT decode logic here if it's too expensive, 
         # but decoding JWT is also fast)
-        from jose import jwt
+        from jose import jwt  # type: ignore
         from app.core.config import settings
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

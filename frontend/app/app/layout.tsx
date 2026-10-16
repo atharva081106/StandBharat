@@ -1,14 +1,19 @@
 "use client"
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAppProvider } from '@/lib/providers'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Bell, Search, Settings, ChevronDown, Activity, Sparkles, Check, X, BarChart2 } from 'lucide-react'
+import { 
+  Bell, Search, Settings, ChevronDown, Activity, Sparkles, Check, X, 
+  BarChart2, Target, Calendar, DollarSign, Brain, Users, CheckCircle2,
+  FileText, LayoutDashboard, Megaphone
+} from 'lucide-react'
 import { useWorkflowStatus } from '@/lib/providers/WorkflowStatusProvider'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { auth, orchestrator, notifications } = useAppProvider()
   const { authState, user, activeWorkspace, activeBrand, logout } = auth
   const orchestratorProvider = orchestrator
@@ -42,8 +47,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authState === 'loggedOut') {
       router.push('/')
+    } else if (authState === 'needsOnboarding' || (authState === 'loggedIn' && user && !activeWorkspace && !user.has_workspace)) {
+      router.push('/onboarding')
     }
-  }, [authState, router])
+  }, [authState, user, activeWorkspace, router])
 
   useEffect(() => {
     async function fetchStatus() {
@@ -56,7 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [])
 
   if (authState === 'loading') return <div className="h-screen flex items-center justify-center bg-[#171515] text-[#F5F3F1]">Loading workspace...</div>
-  if (authState === 'loggedOut') return null
+  if (authState === 'loggedOut' || authState === 'needsOnboarding') return null
 
   return (
     <div className="flex flex-col h-screen bg-[#171515] overflow-hidden font-sans text-[#F5F3F1] selection:bg-[#8F0028] selection:text-white">
@@ -189,6 +196,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+
+      {/* Navigation Subheader */}
+      <nav className="h-[38px] bg-[#191717] border-b border-[#2D2A2A] px-4 flex items-center gap-1 overflow-x-auto shrink-0 z-40">
+        {[
+          { label: 'Command Center', href: '/app', icon: LayoutDashboard, exact: true },
+          { label: 'Campaigns', href: '/app/campaigns', icon: Megaphone },
+          { label: 'Content Studio', href: '/app/content', icon: FileText },
+          { label: 'Approvals', href: '/app/approvals', icon: CheckCircle2 },
+          { label: 'Opportunities', href: '/app/opportunities', icon: Target },
+          { label: 'Brand Brain', href: '/app/brand-brain', icon: Brain },
+          { label: 'Competitors', href: '/app/competitors', icon: Users },
+          { label: 'Calendar', href: '/app/calendar', icon: Calendar },
+          { label: 'Revenue ROI', href: '/app/revenue', icon: DollarSign },
+          { label: 'Analytics', href: '/app/analytics', icon: BarChart2 },
+          { label: 'Settings', href: '/app/settings', icon: Settings },
+        ].map(item => {
+          const isActive = item.exact ? pathname === item.href : (pathname === item.href || pathname?.startsWith(item.href + '/'))
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium transition-colors shrink-0 ${
+                isActive
+                  ? 'bg-[#8F0028]/20 text-white border border-[#8F0028]/50 shadow-sm'
+                  : 'text-[#A9A4A0] hover:text-[#F5F3F1] hover:bg-[#242222]'
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#FF4A70]' : 'text-[#A9A4A0]'}`} />
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
 
       {/* Main Workspace Area (The 4 columns go here) */}
       <main className="flex-1 flex overflow-hidden bg-[#171515]">

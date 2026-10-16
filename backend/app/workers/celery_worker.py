@@ -1,6 +1,4 @@
-import os
 import json
-import traceback
 from app.core.celery_app import celery_app
 
 @celery_app.task
@@ -19,6 +17,7 @@ def generate_core_brand_strategy(workspace_id: str, brand_id: str):
     import uuid
     
     db = SessionLocal()
+    brand_uuid = None
     try:
         try:
             workspace_uuid = uuid.UUID(workspace_id)
@@ -105,19 +104,21 @@ def generate_core_brand_strategy(workspace_id: str, brand_id: str):
         from app.ai.exceptions import AIAuthException
         
         # Ensure we have a strategy object to mark as failed/not configured
-        brand_strategy = db.query(BrandStrategy).filter_by(brand_id=brand_uuid).first()
-        if not brand_strategy:
-            brand_strategy = BrandStrategy(brand_id=brand_uuid)
-            db.add(brand_strategy)
-            
-        if isinstance(e, AIAuthException):
-            brand_strategy.business_strategy = "NOT_CONFIGURED"
-            status, reason = "not_configured", "invalid_api_key"
-        else:
-            brand_strategy.business_strategy = "FAILED"
-            status, reason = "error", str(e)
-            
-        db.commit()
+        status, reason = "error", str(e)
+        if brand_uuid:
+            brand_strategy = db.query(BrandStrategy).filter_by(brand_id=brand_uuid).first()
+            if not brand_strategy:
+                brand_strategy = BrandStrategy(brand_id=brand_uuid)
+                db.add(brand_strategy)
+                
+            if isinstance(e, AIAuthException):
+                brand_strategy.business_strategy = "NOT_CONFIGURED"
+                status, reason = "not_configured", "invalid_api_key"
+            else:
+                brand_strategy.business_strategy = "FAILED"
+                status, reason = "error", str(e)
+                
+            db.commit()
         return {"status": status, "reason": reason}
     finally:
         db.close()

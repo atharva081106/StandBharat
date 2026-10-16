@@ -75,13 +75,13 @@ class ContentBriefResponse(ContentBriefBase):
 
 class ContentDraftResponse(BaseModel):
     id: UUID
-    content_project_id: UUID
+    content_project_id: Optional[UUID] = None
     brief_id: Optional[UUID] = None
     workspace_id: UUID
     brand_id: UUID
     content_type: Optional[str] = None
     title: str
-    body: str
+    body: Optional[str] = ""
     status: str
     generated_by: Optional[str] = None
     generation_metadata: Optional[Dict[str, Any]] = None

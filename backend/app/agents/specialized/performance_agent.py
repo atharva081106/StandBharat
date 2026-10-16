@@ -1,10 +1,11 @@
 import json
+import logging
 import traceback
 from typing import Dict, Any, List
 from app.agents.base import BaseAgent
 from app.agents.context import AgentContext
 from app.agents.result import AgentResult
-from app.models.all_models import Opportunity, AIUsageEvent, TrafficMetrics, SearchMetrics
+from app.models.all_models import Opportunity, AIUsageEvent, TrafficMetrics, SearchMetrics, AgentRun, User
 from app.models.performance import PerformanceSnapshot
 from app.db.session import SessionLocal
 from app.ai.gateway import ai_gateway
@@ -12,6 +13,8 @@ from app.ai.schemas import AIRequestMessage
 from app.ai.exceptions import AINotConfiguredException
 import datetime
 from sqlalchemy import func
+
+logger = logging.getLogger(__name__)
 
 class PerformanceAgent(BaseAgent):
     def __init__(self):
@@ -169,19 +172,62 @@ class PerformanceAgent(BaseAgent):
                 ]
             )
             
-            # Log usage
-            usage = AIUsageEvent(
-                workspace_id=context.workspace_id,
-                user_id=context.user_id,
-                agent_id=self.agent_id,
-                provider=ai_gateway._get_provider().get_name(),
-                model=ai_gateway._get_provider().default_model,
-                input_tokens=res.usage.prompt_tokens if res.usage else 0,
-                output_tokens=res.usage.completion_tokens if res.usage else 0,
-                status="SUCCESS"
-            )
-            db.add(usage)
-            db.commit()
+            # Safely extract usage info
+            info = getattr(res, "info", None)
+            prov_val = "local"
+            mod_val = "default"
+            in_tok = 0
+            out_tok = 0
+            if info is not None:
+                p = getattr(info, "provider", None)
+                if isinstance(p, str):
+                    prov_val = p
+                m = getattr(info, "model", None)
+                if isinstance(m, str):
+                    mod_val = m
+                it = getattr(info, "input_tokens", None)
+                if isinstance(it, int):
+                    in_tok = it
+                ot = getattr(info, "output_tokens", None)
+                if isinstance(ot, int):
+                    out_tok = ot
+            elif hasattr(res, "usage") and res.usage is not None:
+                it = getattr(res.usage, "prompt_tokens", None)
+                if isinstance(it, int):
+                    in_tok = it
+                ot = getattr(res.usage, "completion_tokens", None)
+                if isinstance(ot, int):
+                    out_tok = ot
+
+            try:
+                run_id = context.run_id
+                if run_id:
+                    exists = db.query(AgentRun.id).filter(AgentRun.id == run_id).first()
+                    if not exists:
+                        run_id = None
+                uid = context.user_id
+                if uid:
+                    exists = db.query(User.id).filter(User.id == uid).first()
+                    if not exists:
+                        uid = None
+
+                usage = AIUsageEvent(
+                    workspace_id=context.workspace_id,
+                    brand_id=context.brand_id,
+                    user_id=uid,
+                    agent_id=self.agent_id,
+                    agent_run_id=run_id,
+                    provider=prov_val,
+                    model=mod_val,
+                    input_tokens=in_tok,
+                    output_tokens=out_tok,
+                    status="SUCCESS"
+                )
+                db.add(usage)
+                db.commit()
+            except Exception as ex:
+                db.rollback()
+                logger.warning(f"Could not record AIUsageEvent for performance agent: {ex}")
 
             try:
                 # Strip backticks if present

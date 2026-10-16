@@ -48,9 +48,9 @@ def process_document(db: Session, document_id: str):
     data: bytes = b""
 
     # Backward compatibility: check if file exists directly on disk or in storage service
-    if doc.file_path and os.path.exists(doc.file_path):
+    if doc.file_path and os.path.exists(str(doc.file_path)):
         try:
-            with open(doc.file_path, "rb") as f:
+            with open(str(doc.file_path), "rb") as f:
                 data = f.read()
         except Exception as e:
             doc.processing_status = "FAILED"

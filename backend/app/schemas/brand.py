@@ -25,3 +25,12 @@ class BrandResponse(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+    def get(self, item: str, default: Optional[str] = None) -> Optional[str]:
+        return getattr(self, item, default)
+
+    def __getitem__(self, item: str):
+        val = getattr(self, item, None)
+        if val is not None:
+            return val
+        raise KeyError(item)

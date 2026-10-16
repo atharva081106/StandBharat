@@ -84,11 +84,11 @@ async def test_performance_agent_process():
         assert result2.output_data["findings"]["opportunities_created"] == 0 # Already exists
         
     finally:
+        from app.models.all_models import AIUsageEvent
+        db_session.query(AIUsageEvent).filter(AIUsageEvent.workspace_id == workspace.id).delete()
         db_session.query(Opportunity).filter(Opportunity.workspace_id == workspace.id).delete()
         db_session.query(PerformanceSnapshot).filter(PerformanceSnapshot.workspace_id == workspace.id).delete()
         db_session.query(Brand).filter(Brand.id == brand.id).delete()
-        from app.models.all_models import AIUsageEvent
-        db_session.query(AIUsageEvent).filter(AIUsageEvent.workspace_id == workspace.id).delete()
         db_session.query(Workspace).filter(Workspace.id == workspace.id).delete()
         db_session.query(User).filter(User.id == user.id).delete()
         db_session.commit()

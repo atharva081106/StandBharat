@@ -10,4 +10,5 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: EmailStr
     name: str | None = None
+    has_workspace: bool = False
     model_config = ConfigDict(from_attributes=True)

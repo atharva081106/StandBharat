@@ -35,12 +35,33 @@ class ContentStrategyAgent(BaseAgent):
         try:
             opportunity_id = context.input_data.get("opportunity_id")
             if not opportunity_id:
-                return AgentResult(status="FAILED", error="Missing opportunity_id in input data")
-
-            opportunity = db.query(Opportunity).filter(
-                Opportunity.id == opportunity_id,
-                Opportunity.brand_id == context.brand_id
-            ).first()
+                opportunity = db.query(Opportunity).filter(
+                    Opportunity.brand_id == context.brand_id,
+                    Opportunity.status.notin_(["DISMISSED", "COMPLETED"])
+                ).order_by(Opportunity.priority.desc()).first()
+                if not opportunity:
+                    # Create default strategic opportunity
+                    brand_name = context.brand_context.brand.name if context.brand_context and context.brand_context.brand else "StandBharat"
+                    opportunity = Opportunity(
+                        workspace_id=context.workspace_id,
+                        brand_id=context.brand_id,
+                        title=f"Scale High-Intent Organic Pipeline for {brand_name}",
+                        description="Drive organic conversions through targeted comparison guides and architectural deep-dives.",
+                        impact="High",
+                        confidence="High",
+                        effort="Low",
+                        priority=9,
+                        status="ACCEPTED",
+                        source="AI_CMO"
+                    )
+                    db.add(opportunity)
+                    db.commit()
+                    db.refresh(opportunity)
+            else:
+                opportunity = db.query(Opportunity).filter(
+                    Opportunity.id == opportunity_id,
+                    Opportunity.brand_id == context.brand_id
+                ).first()
 
             if not opportunity:
                 return AgentResult(status="FAILED", error="Opportunity not found")

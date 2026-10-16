@@ -50,6 +50,34 @@ def get_brand_brain(
         "strategy_documents": strategy_documents
     }
 
+# ----------------- SUMMARY -----------------
+@router.get("/summary")
+def get_brand_summary(
+    db: Session = Depends(get_db),
+    brand: Brand = Depends(get_current_brand)
+):
+    voice = db.query(BrandVoice).filter(BrandVoice.brand_id == brand.id).first()
+    audiences = db.query(Audience).filter(Audience.brand_id == brand.id).all()
+    goals = db.query(Goal).filter(Goal.brand_id == brand.id).all()
+    positioning = db.query(Positioning).filter(Positioning.brand_id == brand.id).first()
+    competitors = db.query(Competitor).filter(Competitor.brand_id == brand.id).all()
+    return {
+        "brand_id": str(brand.id),
+        "brand_name": brand.name,
+        "website_url": brand.website_url,
+        "tagline": brand.tagline,
+        "mission": brand.mission,
+        "personality": voice.personality if voice else None,
+        "formality": voice.formality if voice else None,
+        "tone": voice.tone if voice else None,
+        "target_audience": audiences[0].name if audiences else None,
+        "pain_points": audiences[0].pain_points if audiences else None,
+        "primary_goal": goals[0].goal if goals else None,
+        "target_value": goals[0].target_value if goals else None,
+        "positioning": positioning.unique_value_proposition if positioning else None,
+        "competitors": [c.name for c in competitors]
+    }
+
 # ----------------- VOICE -----------------
 @router.get("/voice", response_model=BrandVoiceResponse)
 def get_voice(db: Session = Depends(get_db), brand: Brand = Depends(get_current_brand)):

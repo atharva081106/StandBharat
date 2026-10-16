@@ -12,7 +12,7 @@ class AgentResultService:
                 AgentRun.status == "SUCCESS"
             ).order_by(AgentRun.completed_at.desc()).first()
             if run:
-                results[agent_type] = run.output_data
+                results[agent_type] = getattr(run, "output", getattr(run, "output_data", {}))
         return results
 
 agent_result_service = AgentResultService()

@@ -1,7 +1,7 @@
 from typing import Generator
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import jwt, JWTError  # type: ignore
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -39,7 +39,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or session expired. Please log in.")
     return user
 
 def get_current_workspace(
